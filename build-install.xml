@@ -4,7 +4,7 @@
       <!-- fetch dependencies and install -->
       <mkdir dir="lib"/>
       <mkdir dir="dependencies"/>
-      <get src="http://downloads.sourceforge.net/project/loc-xferutils/loc-bil-java-library/4.3/bagit-4.3-bin.zip" dest="dependencies"/>
+      <get src="http://downloads.sourceforge.net/project/loc-xferutils/loc-bil-java-library/4.3/bagit-4.3-bin.zip" dest="dependencies" usetimestamp="true"/>
       <mkdir dir="dependencies/bagit"/>
       <unzip src="dependencies/bagit-4.3-bin.zip" dest="dependencies/bagit"/>
       <copy todir="lib">
@@ -12,7 +12,7 @@
       </copy>
       
       <mkdir dir="dependencies/jhove"/>
-      <get src="http://downloads.sourceforge.net/project/jhove/jhove/JHOVE%201.6/jhove-1_6.zip" dest="dependencies/jhove-1_6.zip"/>
+      <get src="http://downloads.sourceforge.net/project/jhove/jhove/JHOVE%201.6/jhove-1_6.zip" dest="dependencies/jhove-1_6.zip" usetimestamp="true"/>
       <unzip src="dependencies/jhove-1_6.zip" dest="dependencies/jhove"/>
       <copy todir="lib" flatten="true">
          <fileset dir="." includes="dependencies/jhove/jhove/bin/JhoveApp.jar config/jhove.conf"/>
@@ -21,11 +21,22 @@
       <!-- ant-contrib package - needed for foreach etc. -->
       
       <mkdir dir="dependencies/ant-contrib"/>
-      <get src="http://downloads.sourceforge.net/project/ant-contrib/ant-contrib/1.0b3/ant-contrib-1.0b3-bin.zip" dest="dependencies/ant-contrib-1.0b3-bin.zip"/>
+      <get src="http://downloads.sourceforge.net/project/ant-contrib/ant-contrib/1.0b3/ant-contrib-1.0b3-bin.zip" dest="dependencies/ant-contrib-1.0b3-bin.zip" usetimestamp="true"/>
       <unzip src="dependencies/ant-contrib-1.0b3-bin.zip" dest="dependencies/ant-contrib"/>
       <copy todir="lib">
          <fileset dir="dependencies/ant-contrib/ant-contrib" includes="ant-contrib-1.0b3.jar"/>
          <!-- note: we aren't copying jars from ant-contrib's lib directory since either bagit copied more recent versions or they aren't needed by our tasks -->
+      </copy>
+      
+      <!-- get Kawa - to run xqueries -->
+      <get src="http://ftp.gnu.org/pub/gnu/kawa/kawa-1.12.jar" dest="lib/kawa-1.12.jar" usetimestamp="true"/>
+      
+      <!-- get Saxon -->
+      <mkdir dir="dependencies/saxon"/>
+      <get src="http://downloads.sourceforge.net/project/saxon/Saxon-HE/9.4/SaxonHE9-4-0-4J.zip" dest="dependencies/SaxonHE9-4-0-4J.zip" usetimestamp="true"/>
+      <unzip src="dependencies/SaxonHE9-4-0-4J.zip" dest="dependencies/saxon"/>
+      <copy todir="lib">
+         <fileset dir="dependencies/saxon" includes="saxon9he.jar"/>
       </copy>
    </target>
 </project>

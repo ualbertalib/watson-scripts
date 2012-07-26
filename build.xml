@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project basedir="." default="dist" name="Watson">
-
-   <property name="dir.images.source" location="data"/>
-   <property name="dir.metadata" location="metadata"/>
+   <property file="build.properties"/>
    
    <!-- add the jars in the lib directory to the classpath -->
    <path id="main.classpath">
@@ -118,7 +116,13 @@
          <arg value="${tiffile}"/>
       </java>
    </target>
-   
+   <target name="jhove-parse">
+      <mkdir dir="output"/>   
+      <java classpathref="main.classpath" classname="net.sf.saxon.Query">
+         <arg value="-q:xquery/test.xquery"/>
+         <arg value="-o:output/jhove-parse.xml"/>
+      </java>
+   </target>
    
    <!-- bagit target: master - TODO add target to create bags (using same bagit library) -->
    
@@ -204,32 +208,4 @@
       <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>
    </target>
    
-   <target name="install">
-      <!-- fetch dependencies and install -->
-      <mkdir dir="lib"/>
-      <mkdir dir="dependencies"/>
-      <!--<get src="http://downloads.sourceforge.net/project/loc-xferutils/loc-bil-java-library/4.3/bagit-4.3-bin.zip" dest="dependencies"/>
-      <mkdir dir="dependencies/bagit"/>
-      <unzip src="dependencies/bagit-4.3-bin.zip" dest="dependencies/bagit"/>
-      <copy todir="lib">
-         <fileset dir="dependencies/bagit/bagit-4.3/lib" includes="*.jar"/>
-      </copy>
-      -->
-      <mkdir dir="dependencies/jhove"/>
-      <!--<get src="http://downloads.sourceforge.net/project/jhove/jhove/JHOVE%201.6/jhove-1_6.zip" dest="dependencies/jhove-1_6.zip"/>-->
-      <unzip src="dependencies/jhove-1_6.zip" dest="dependencies/jhove"/>
-      <copy todir="lib">
-         <fileset dir="." includes="dependencies/jhove/jhove/bin/JhoveApp.jar jhove.conf"/>
-      </copy>
-      
-      <!-- ant-contrib package - needed for foreach etc. -->
-      
-      <mkdir dir="dependencies/ant-contrib"/>
-      <get src="http://downloads.sourceforge.net/project/ant-contrib/ant-contrib/1.0b3/ant-contrib-1.0b3-bin.zip" dest="dependencies/ant-contrib-1.0b3-bin.zip"/>
-      <unzip src="dependencies/ant-contrib-1.0b3-bin.zip" dest="dependencies/ant-contrib"/>
-      <copy todir="lib">
-         <fileset dir="dependencies/ant-contrib/ant-contrib" includes="ant-contrib-1.0b3.jar"/>
-         <!-- note: we aren't copying jars from ant-contrib's lib directory since either bagit copied more recent versions or they aren't needed by our tasks -->
-      </copy>
-   </target>
 </project>

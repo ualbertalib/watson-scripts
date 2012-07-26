@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?><results><tiff uri="/Users/peterbinkley/data/work/watson-scripts/data/box1/good.tiff"><lastModified>2012-07-26T09:15:32-06:00</lastModified><size>137786</size><status>Well-Formed and valid</status></tiff><tiff uri="/Users/peterbinkley/data/work/watson-scripts/data/box1/nontiff.tiff"><lastModified>2012-07-26T08:39:21-06:00</lastModified><size>9057</size><status>Not well-formed</status><messages xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://hul.harvard.edu/ois/xml/ns/jhove">
+   <message offset="0" severity="error">No TIFF header: &lt;?</message>
+  </messages></tiff><tiff uri="/Users/peterbinkley/data/work/watson-scripts/data/box1/truncatedtiff.tiff"><lastModified>2012-07-26T09:31:15-06:00</lastModified><size>123456</size><status>Not well-formed</status><messages xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://hul.harvard.edu/ois/xml/ns/jhove">
+   <message offset="4780242" severity="error">Premature EOF</message>
+  </messages></tiff></results>
