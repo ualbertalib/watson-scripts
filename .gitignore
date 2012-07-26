@@ -2,4 +2,5 @@ build.properties
 metadata/
 lib/
 dependencies/
+output/
 *~
