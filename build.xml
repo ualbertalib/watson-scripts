@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="dist" name="Watson">
+
+   <property name="dir.images.source" location="data"/>
+   <property name="dir.metadata" location="metadata"/>
+   
+   <!-- add the jars in the lib directory to the classpath -->
+   <path id="main.classpath">
+      <fileset dir="lib">
+         <include name="**/*.jar"/>
+      </fileset>
+      <pathelement path="${java.class.path}"/>
+   </path>
+   <!-- check that all the extra tasks are available; fail with a message if any are missing -->
+
+   <available resource="net/sf/antcontrib/antlib.xml" property="available.antcontrib" classpathref="main.classpath"/>
+   <fail unless="available.antcontrib">****************
+      
+      Can't find antcontrib</fail>
+
+   <!-- declare extra tasks -->
+   <taskdef resource="net/sf/antcontrib/antlib.xml" classpathref="main.classpath"/>
+   
+   
+   
+   
+   
+   
+   
+   
+   <import file="build-import-utilities.xml"/>
+   
+   <!-- sample script selector - could be extended to e.g. detect files that are present in one copy but not another -->
+   <selector id="has.www.selector">
+      <scriptselector language="javascript" xml:space="preserve">
+            if (file.isDirectory()) {
+               var marker = new java.io.File(file, "martini/www");
+               self.setSelected(marker.exists() &amp;&amp; marker.isDirectory());
+            }
+      </scriptselector>
+   </selector>
+   
+
+
+
+   <!-- basic copy target -->
+   <target name="newspapers-wcmets-copyhd" description="Copy wcmets materials from hd to SAN" if="delivery">
+      <mkdir dir="${wcmetslocation}"/>
+      <copy todir="${wcmetslocation}">
+         <fileset dir="${wcmetshd}">
+            <include name="**/*.xml"/>
+            <include name="**/*.pdf"/>
+            <include name="**/*.jp2"/>
+         </fileset>
+      </copy>
+   </target>
+   
+   
+   <!-- sample target with logging and email notification -->
+   <target name="newspapers-wcmets-ingest"
+      description="Copy wcmets materials from hd to sam-fs cache" depends="init">
+      <!-- e.g. -Dwcmetshd=e:/UniversityOfAlberta -Dwcmetslocation=V:/peel_newspaper/west_canadian -->
+      <!-- note: depends on copy.properties file in each newspaper directory -->
+      <property name="dirset" value="*"/>
+      <property name="overwrite" value="false"/>
+      <defaultexcludes add="**/System Volume Information/**"/>
+      <defaultexcludes add="**/WD_Setup_Do_Not_Remove/**"/>
+      <defaultexcludes add="**/$RECYCLE.BIN/**"/>
+      
+      <property name="targetname" value="newspapers-wcmets-ingest"/>
+      <property name="logname" value="${logshome}/processing/${targetname}-${host}-${run.tstamp}.log"/>
+      <record name="${logname}" action="start" append="no"/>
+      <antcall target="run-start"/>
+      
+      
+      <subant inheritall="yes" genericantfile="build-subant-targets.xml"
+         target="newspapers-wcmets-ingest">
+         <dirset dir="${wcmetshd}" includes="${dirset}"/>
+      </subant>
+      
+      <antcall target="run-end"/>
+      <antcall target="email-result" inheritall="true"/>
+   </target>
+   
+   
+   
+   
+   
+   <!-- JHOVE targets -->
+   <!-- prepare image metadata, using JHove -->
+   <target name="metadata" description="Create image metadata using jhove for this item">
+      <mkdir dir="${dir.metadata}"/>
+      <foreach param="tiffile" target="jhove-single">
+         
+         <path id="tif.path">
+            <fileset dir="${dir.images.source}" includes="**/*.tif **/*.TIF **/*.tiff **/*.TIFF"/>
+         </path>
+      </foreach>
+   </target>
+   <!-- utility task for metadata: this allows us to do an uptodate check, so the metadata won't be recreated if the TIFF hasn't changed -->
+   <target name="jhove-single">
+      <!-- get filename without path or extension-->
+      <propertyregex property="filename" input="${tiffile}" regexp="(.*)\${file.separator}(.*)\.[tT][iI][fF][fF]?" select="\2"/>
+      <uptodate property="jhove.uptodate" srcfile="${tiffile}" targetfile="${dir.metadata}${file.separator}${filename}.xml"/>
+      <antcall target="jhove-single-do-it" inheritall="true"/>
+   </target>
+   <!-- utility task for metadata: create the metadata unless we are already uptodate -->
+   <target name="jhove-single-do-it" unless="jhove.uptodate">
+      <java jar="lib/jhoveapp.jar" fork="true">
+         <arg value="-c"/>
+         <arg value="lib/jhove.conf"/>
+         <arg value="-o"/>
+         <arg value="${dir.metadata}${file.separator}${filename}.xml"/>
+         <arg value="-h"/>
+         <arg value="xml"/>
+         <arg value="-m"/>
+         <arg value="TIFF-hul"/>
+         <arg value="${tiffile}"/>
+      </java>
+   </target>
+   
+   
+   <!-- bagit target: master - TODO add target to create bags (using same bagit library) -->
+   
+   <target name="bagit-verify-master" description="verify BagIt bags on portable drive" depends="init">
+      <property name="targetname" value="bagit-verify"/>
+      <property name="drive" location="e:/"/>
+      <property name="dirset" value="*/*/*"/>
+      <property name="bag.command" value="verifyvalid"/>
+      
+      <dirset id="bagit-verify-dirset" dir="${drive}">
+         <include name="${dirset}"/>
+      </dirset>
+      
+      <resourcecount property="dirsetcount">
+         <dirset refid="bagit-verify-dirset"/>
+      </resourcecount>
+      <property name="logname" value="${logshome}/processing/${targetname}-${host}-${run.tstamp}.log"/>
+      <record name="${logname}" action="start" append="no"/>
+      <antcall target="run-start"/>
+      
+      
+      <echo>${bag.command}</echo>
+      <mkdir dir="${logshome}"/>
+      <defaultexcludes add="**/System Volume Information/**"/>
+      <defaultexcludes add="**/WD_Setup_Do_Not_Remove/**"/>
+      <subant inheritall="yes" genericantfile="build.xml" target="bagit-verify">
+         <dirset refid="bagit-verify-dirset"/>
+      </subant>
+      
+      <antcall target="run-end"/>
+      <antcall target="email-result" inheritall="true"/>
+      
+   </target>
+   
+   
+   <!-- bagit targets: directory level -->
+   
+   <target name="bagit-verify">
+      <basename property="dirname" file="."/>
+      <property name="logfile" value="${logshome}/processing/bagit-${dirname}.log"/>
+      <condition property="is.bag">
+         <available file="bagit.txt"/>
+      </condition>
+      <condition property="is.verified">
+         <or>
+            <and>
+               <isset property="is.bag"/>
+               <available file="bag_verified"/>
+               <not>
+                  <isset property="force"/>
+               </not>
+            </and>
+            <and>
+               <isset property="skip.logged"/>
+               <available file="${logfile}"/>
+            </and>
+         </or>
+      </condition>
+      <echo>${publication}/${dirname} is.bag: ${is.bag}; is.verified: ${is.verified}</echo>
+      <antcall target="bagit-verify-do-it"/>
+   </target>
+   <target name="bagit-verify-do-it" unless="is.verified">
+      <!-- note: inputstring is necessary to prevent forked java process from hanging when running in background -->
+      <java classpath="${martinihome}/lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" output="${logfile}">
+         <jvmarg value="-Dclassworlds.conf=${martinihome}/lib/bag.classworlds.conf"/>
+         <jvmarg value="-Dapp.home=${martinihome}"/>
+         <!--<jvmarg value="-Dlog_file=${logshome}/processing/bagit-${dirname}.log"/>-->
+         <arg value="${bag.command}"/>
+         <arg value="."/>
+      </java>
+      <trycatch property="exc">
+         <try>
+            <touch file="bag_verified"/>
+         </try>
+         <catch>
+            <echo>${exc}</echo>
+         </catch>
+      </trycatch>
+      <!-- bagit code doesn't put line breaks between file reports in output -->
+      <replace file="${logfile}" token="Fixity failure" value="&#x0a;Fixity failure"/>
+      <replace file="${logfile}" token=" File data/" value="&#x0a;File data/"/>
+      <replace file="${logfile}" token=" Bag has file" value="&#x0a;Bag has file"/>
+      <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>
+   </target>
+   
+   <target name="install">
+      <!-- fetch dependencies and install -->
+      <mkdir dir="lib"/>
+      <mkdir dir="dependencies"/>
+      <!--<get src="http://downloads.sourceforge.net/project/loc-xferutils/loc-bil-java-library/4.3/bagit-4.3-bin.zip" dest="dependencies"/>
+      <mkdir dir="dependencies/bagit"/>
+      <unzip src="dependencies/bagit-4.3-bin.zip" dest="dependencies/bagit"/>
+      <copy todir="lib">
+         <fileset dir="dependencies/bagit/bagit-4.3/lib" includes="*.jar"/>
+      </copy>
+      -->
+      <mkdir dir="dependencies/jhove"/>
+      <!--<get src="http://downloads.sourceforge.net/project/jhove/jhove/JHOVE%201.6/jhove-1_6.zip" dest="dependencies/jhove-1_6.zip"/>-->
+      <unzip src="dependencies/jhove-1_6.zip" dest="dependencies/jhove"/>
+      <copy todir="lib">
+         <fileset dir="." includes="dependencies/jhove/jhove/bin/JhoveApp.jar jhove.conf"/>
+      </copy>
+      
+      <!-- ant-contrib package - needed for foreach etc. -->
+      
+      <mkdir dir="dependencies/ant-contrib"/>
+      <get src="http://downloads.sourceforge.net/project/ant-contrib/ant-contrib/1.0b3/ant-contrib-1.0b3-bin.zip" dest="dependencies/ant-contrib-1.0b3-bin.zip"/>
+      <unzip src="dependencies/ant-contrib-1.0b3-bin.zip" dest="dependencies/ant-contrib"/>
+      <copy todir="lib">
+         <fileset dir="dependencies/ant-contrib/ant-contrib" includes="ant-contrib-1.0b3.jar"/>
+         <!-- note: we aren't copying jars from ant-contrib's lib directory since either bagit copied more recent versions or they aren't needed by our tasks -->
+      </copy>
+   </target>
+</project>

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="import-utilities">
+   <!--	*************************************************************************************************
+      *		init																					*
+      *		-  create a standard timestamp for a given run								*
+      *************************************************************************************************	-->
+   <target name="init">
+      <tstamp/>
+      <tstamp>
+         <format property="run.tstamp" pattern="yyyy-MM-dd'T'HH-mm-ss"/>
+         <format property="day.tstamp" pattern="yyyy-MM-dd"/>
+      <!-- timestamp suitable for use as unique filename for this run -->
+         <format property="filename.tstamp" pattern="yyyy-MM-dd-HH-mm-ss-SSS"/>
+      </tstamp> 
+   </target>
+   
+   <target name="test.set.index">
+      <fail unless="index"
+         message="Run error!
+         
+         Error: You must set index property
+         Use '-Dindex=peelbib' or '-Dindex=newspapers'"/>
+      <!-- set index properties -->
+      <property name="solr.old" value="${solr.old.root}/${index}-old/index"/>
+      <property name="solr.production" value="${solr.production.root}/${index}/index"/>
+      <property name="solr.staging" value="${solr.staging.root}/${index}-staging/index"/>
+      <property name="solr.merged" value="${solr.merged.root}/${index}-merged/index"/>
+      <property name="solr.new" value="${solr.new.root}/${index}-new/index"/>
+      <!-- propagate from staging index (master) to production index (slave) -->
+      <property name="solr.scripts.master" value="${solr.staging.root}/${index}-staging/bin"/>
+      <property name="solr.scripts.slave" value="${solr.production.root}/${index}/bin"/>
+      
+      <property name="solr.instance" value="${solr.instance.root}/solr-${index}"/>
+      <property name="solr.instance.new" value="${solr.instance.root}/solr-${index}-new"/>
+      <property name="solr.instance.staging" value="${solr.instance.root}/solr-${index}-staging"/>
+   </target>
+   
+   <!--	*************************************************************************************************
+      *		logtimestamp																					              *
+      *		- add a timestamp line to the current log												          *
+      *		- expects parameter "message" e.g.                                                            *
+      *      <antcall target="logtimestamp">                                                                     *
+      *            <param name="message" value="Starting copymdb target"/>                 *
+      *    </antcall>                                                       													*
+      *************************************************************************************************	-->
+   <target name="logtimestamp" description="Log timestamp (not called directly)">
+      <tstamp>
+         <format property="time" pattern="${timeformat}"/>
+      </tstamp>
+      <echo message="*********** ${message} &#x0a; ${time}"/>
+   </target>
+   
+   <!-- utilities -->
+   
+   <target name="email-test" depends="init">
+      <property name="targetname" value="email.test"/>
+      <property name="dirset" value="/dummy/dirset"/>
+      <property name="logname" value="${logshome}/processing/${targetname}-${host}-${run.tstamp}.log"/>
+      <record name="${logname}" action="start" append="no"/>
+      <echo>This is test output so there will be something in the log.</echo>
+      <sleep seconds="5"/>
+      <antcall target="email-result" inheritall="true"/>
+   </target>
+   
+   <target name="email-result" unless="no.email">
+      <!-- should set targetname, host, dirset, and logname before calling this target -->
+      <!-- subject and exc can be overridden e.g. for error reports -->
+      <property name="subject" value="${targetname} on ${host} for ${dirset} finished"/>
+      <property name="exc" value=""/>
+      <!-- set excblock: header and text is exc property is not empty; otherwise empty -->
+      <script language="javascript">
+			<![CDATA[
+	var exc = project.getProperty("exc");
+	var excblock = "";
+	if (!(exc.equals(""))) 
+	  excblock = "Exception:\n" + exc +"\n\n";
+	project.setProperty("excblock", excblock);
+	]]></script>
+      <echo>Sending email.</echo>
+      <!-- sleep to make sure log is flushed -->
+      <sleep seconds="5"/>
+      <!-- load 100 lines from tail of log -->
+      <loadfile property="logtail" srcFile="${logname}">
+         <filterchain>
+            <tailfilter lines="100"/>
+         </filterchain>
+      </loadfile>
+      <mail subject="${subject}" tolist="peter.binkley@ualberta.ca,weiwei.shi@ualberta.ca" mailhost="mailgw.library.ualberta.ca">
+         <from address="Peel Processor &lt;ddev@chelsea.library.ualberta.ca&gt;"/>
+         <replyto address="peter.binkley@ualberta.ca"/>
+         <message>${targetname} on ${host} for ${dirset} finished.&#x0a;&#x0a;
+            log: ${logname}&#x0a;&#x0a;${excblock}&#x0a;Log tail:&#x0a;${logtail}</message>
+      </mail>
+   </target>
+   
+   <target name="run-start">
+      <antcall target="logtimestamp">
+         <param name="message" value="Starting ${targetname} on ${host} for ${dirset} (${dirsetcount} directories)&#x0a;Log: ${logname}"/>
+      </antcall>
+   </target>
+   
+   <target name="run-end">
+      <antcall target="logtimestamp">
+         <param name="message"
+            value="Finishing  ${targetname} on ${host} for ${dirset} (${dirsetcount} directories)&#x0a;Log: ${logname}"/>
+      </antcall>
+   </target>
+   
+   <!-- manage locks on working directories -->
+    
+   <target name="lock-working-dir-check">
+       <available property="islocked" file="${workinghome}/lock"/>
+       <antcall target="lock-working-dir-lock"/>
+   </target>
+    
+    <target name="lock-working-dir-lock" unless="islocked">
+        <echo file="${workinghome}${file.separator}lock">lock.run=${targetname}-${host}-${run.tstamp}</echo>
+        <property file="${workinghome}/lock"/>
+        <echo>Working home "${workinghome}" successfully locked by "${lock.run}"</echo>
+    </target>
+    
+    <target name="lock-working-dir" depends="lock-working-dir-check" if="islocked">
+        <!-- assumes property workinghome has been set -->
+        <!-- lock file contains property run=[timestamp etc.] -->
+        <property file="${workinghome}/lock"/>
+        <fail>********
+            
+Working home "${workinghome}" already locked by "${lock.run}"
+        </fail>
+    </target>
+
+    <target name="unlock-working-dir-check">
+        <property file="${workinghome}/lock"/>
+        <condition property="ismylock">
+            <equals arg1="${lock.run}" arg2="${targetname}-${host}-${run.tstamp}"/>
+        </condition>
+    </target>
+    
+    <target name="unlock-working-dir" depends="unlock-working-dir-check" if="ismylock">
+        <delete file="${workinghome}/lock"/>
+        <echo>Working home "${workinghome}" unlocked.</echo>
+    </target>
+    
+    <target name="lock-test" depends="init">
+        <antcall target="lock-working-dir"/>
+        <available property="lock" file="${workinghome}/lock"/>
+        <echo>Running ... lock: ${lock}</echo>
+        <antcall target="unlock-working-dir"/>
+        <available property="lock" file="${workinghome}/lock"/>
+        <echo>Ending ... lock: ${lock}</echo>
+    </target>
+    
+    <target name="grep-file-not-found-error">
+        
+        <taskdef name="grep" classname="ise.antelope.tasks.Find"/>
+        <loadfile property="logcontent" srcFile="${logname}"></loadfile>
+        <grep in="${logcontent}" regex=".*No such file or directory.*" property="output"/>
+        <condition property="error.in.convert">
+            <isset property="output"/>
+        </condition>
+        <condition property="no.error">
+            <not>
+                <isset property="output" />
+            </not>
+        </condition>  
+        
+    </target>
+    <target name="email-error-result" if="error.in.convert">
+        <antcall target="email-result" inheritall="yes">
+            <param name="subject" value="File Not Found error in Processing - ! ${targetname} on ${host} for ${dirset}"/>
+            <param name="exc" value="${exc}"/>
+        </antcall>
+        
+    </target>
+   <target name="build-delivery-dirset">
+        <property name="use-N" value="false"/>
+        <property name="use-path" value="true"/>
+        <property name="use-martini-dir" value="false"/>
+        <property name="nodeset" value="false"/>
+        <condition property="dir2xml.go">
+            <and>
+                <isset property="dir"/>
+                <isset property="delivery"/>
+            </and>
+        </condition>
+       <condition property="nodeset.go">
+           <equals arg1="${nodeset}" arg2="true"/>
+       </condition>
+      <fail unless="dir2xml.go">Required parameters: dir and delivery</fail>
+        <xslt in="build.xml" out="delivery-dirset-${delivery}.xml" style="xsl/build-delivery-dirset.xsl" force="true">
+            <param name="delivery" expression="${delivery}"/>
+            <param name="dir" expression="${dir}"/>
+            <param name="use-N" expression="${use-N}"/>
+            <param name="use-path" expression="${use-path}"/>
+            <param name="use-martini-dir" expression="${use-martini-dir}"/>
+        </xslt>
+       <echo>nodeset.go is ${nodeset.go}</echo>
+       <antcall target="build-delivery-nodeset" inheritall="true"></antcall>   
+        
+
+   </target>
+    <target name="build-delivery-nodeset" if="nodeset.go">
+    
+        <xslt in="build.xml" out="delivery-nodeset-${delivery}.xml" style="xsl/build-delivery-nodeset.xsl" force="true">
+            <param name="delivery" expression="${delivery}"/>
+        </xslt>
+        
+    </target>
+    
+    
+</project>
