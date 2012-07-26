@@ -1,19 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project basedir="." default="install" name="Watson-Install">
+   
+   <property name="bagit" value="bagit-4.3-bin.zip"/>
+   <property name="bagit-md5" value="60b3b741da5db4ba203f3071961ff1a5"/>
+   
+   <property name="jhove" value="jhove-1_6.zip"/>
+   <property name="jhove-md5" value="1445236175c17cecf6b03d73864ad715"/>
+   
+   <property name="ant-contrib" value="ant-contrib-1.0b3-bin.zip"/>
+   <property name="ant-contrib-md5" value="c5a75fc28cbc52f09bd43b5506978601"/>
+   
+   <property name="saxon" value="SaxonHE9-4-0-4J.zip"/>
+   <property name="saxon-md5" value="fea2495399bb6ede3f7616733c8393a6"/>
+
+   <property name="antunit" value="apache-ant-antunit-1.2-bin.zip"/>
+   <property name="antunit-md5" value="97e547775cbab8b505ac9270bc8fefdf"/>
+   
+   <property name="xmltask" value="xmltask.jar"/>
+   <property name="xmltask-md5" value="b2cda8a5800858d503a8b11253a3e642"/>
+   
    <target name="install">
       <!-- fetch dependencies and install -->
       <mkdir dir="lib"/>
       <mkdir dir="dependencies"/>
-      <get src="http://downloads.sourceforge.net/project/loc-xferutils/loc-bil-java-library/4.3/bagit-4.3-bin.zip" dest="dependencies" usetimestamp="true"/>
+      <get src="http://downloads.sourceforge.net/project/loc-xferutils/loc-bil-java-library/4.3/${bagit}" dest="dependencies" usetimestamp="true"/>
+      <condition property="bagit-ok">
+         <checksum file="dependencies/${bagit}" property="${bagit-md5}"/>
+      </condition>
+      <fail unless="bagit-ok" message="dependencies/${bagit} checksum is not correct"/>
       <mkdir dir="dependencies/bagit"/>
-      <unzip src="dependencies/bagit-4.3-bin.zip" dest="dependencies/bagit"/>
+      <unzip src="dependencies/${bagit}" dest="dependencies/bagit"/>
       <copy todir="lib">
          <fileset dir="dependencies/bagit/bagit-4.3/lib" includes="*.jar"/>
       </copy>
       
+      <!-- get JHOVE -->
       <mkdir dir="dependencies/jhove"/>
-      <get src="http://downloads.sourceforge.net/project/jhove/jhove/JHOVE%201.6/jhove-1_6.zip" dest="dependencies/jhove-1_6.zip" usetimestamp="true"/>
-      <unzip src="dependencies/jhove-1_6.zip" dest="dependencies/jhove"/>
+      <get src="http://downloads.sourceforge.net/project/jhove/jhove/JHOVE%201.6/${jhove}" dest="dependencies/${jhove}" usetimestamp="true"/>
+      <condition property="jhove-ok">
+         <checksum file="dependencies/${jhove}" property="${jhove-md5}"/>
+      </condition>
+      <fail unless="jhove-ok" message="dependencies/${jhove} checksum is not correct"/>
+      <unzip src="dependencies/${jhove}" dest="dependencies/jhove"/>
       <copy todir="lib" flatten="true">
          <fileset dir="." includes="dependencies/jhove/jhove/bin/JhoveApp.jar config/jhove.conf"/>
       </copy>
@@ -21,22 +49,50 @@
       <!-- ant-contrib package - needed for foreach etc. -->
       
       <mkdir dir="dependencies/ant-contrib"/>
-      <get src="http://downloads.sourceforge.net/project/ant-contrib/ant-contrib/1.0b3/ant-contrib-1.0b3-bin.zip" dest="dependencies/ant-contrib-1.0b3-bin.zip" usetimestamp="true"/>
-      <unzip src="dependencies/ant-contrib-1.0b3-bin.zip" dest="dependencies/ant-contrib"/>
+      <get src="http://downloads.sourceforge.net/project/ant-contrib/ant-contrib/1.0b3/${ant-contrib}" dest="dependencies/${ant-contrib}" usetimestamp="true"/>
+      <condition property="ant-contrib-ok">
+         <checksum file="dependencies/${ant-contrib}" property="${ant-contrib-md5}"/>
+      </condition>
+      <fail unless="ant-contrib-ok" message="dependencies/${ant-contrib} checksum is not correct"/>
+      <unzip src="dependencies/${ant-contrib}" dest="dependencies/ant-contrib"/>
       <copy todir="lib">
          <fileset dir="dependencies/ant-contrib/ant-contrib" includes="ant-contrib-1.0b3.jar"/>
          <!-- note: we aren't copying jars from ant-contrib's lib directory since either bagit copied more recent versions or they aren't needed by our tasks -->
       </copy>
       
-      <!-- get Kawa - to run xqueries -->
-      <get src="http://ftp.gnu.org/pub/gnu/kawa/kawa-1.12.jar" dest="lib/kawa-1.12.jar" usetimestamp="true"/>
-      
       <!-- get Saxon -->
       <mkdir dir="dependencies/saxon"/>
-      <get src="http://downloads.sourceforge.net/project/saxon/Saxon-HE/9.4/SaxonHE9-4-0-4J.zip" dest="dependencies/SaxonHE9-4-0-4J.zip" usetimestamp="true"/>
-      <unzip src="dependencies/SaxonHE9-4-0-4J.zip" dest="dependencies/saxon"/>
+      <get src="http://downloads.sourceforge.net/project/saxon/Saxon-HE/9.4/${saxon}" dest="dependencies/${saxon}" usetimestamp="true"/>
+      <condition property="saxon-ok">
+         <checksum file="dependencies/${saxon}" property="${saxon-md5}"/>
+      </condition>
+      <fail unless="saxon-ok" message="dependencies/${saxon} checksum is not correct"/>
+      <unzip src="dependencies/${saxon}" dest="dependencies/saxon"/>
       <copy todir="lib">
          <fileset dir="dependencies/saxon" includes="saxon9he.jar"/>
+      </copy>
+      
+      <!-- get AntUnit -->
+      <mkdir dir="dependencies/antunit"/>
+      <get src="http://www.apache.org/dist/ant/antlibs/antunit/binaries/${antunit}" dest="dependencies/${antunit}" usetimestamp="true"/>
+      <condition property="antunit-ok">
+         <checksum file="dependencies/${antunit}" property="${antunit-md5}"/>
+      </condition>
+      <fail unless="antunit-ok" message="dependencies/${antunit} checksum is not correct"/>
+      <unzip src="dependencies/${antunit}" dest="dependencies/antunit"/>
+      <copy todir="lib">
+         <fileset dir="dependencies/antunit/apache-ant-antunit-1.2" includes="ant-antunit-1.2.jar"/>
+      </copy>
+      
+      <!-- get xmltask -->
+      <mkdir dir="dependencies/xmltask"/>
+      <get src="http://downloads.sourceforge.net/project/xmltask/xmltask/1.16/${xmltask}" dest="dependencies/xmltask/${xmltask}" usetimestamp="true"/>
+      <condition property="antunit-ok">
+         <checksum file="dependencies/xmltask/${xmltask}" property="${xmltask-md5}"/>
+      </condition>
+      <fail unless="antunit-ok" message="dependencies/${xmltask} checksum is not correct"/>
+      <copy todir="lib">
+         <fileset dir="dependencies/xmltask" includes="xmltask.jar"/>
       </copy>
    </target>
 </project>

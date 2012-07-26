@@ -15,16 +15,15 @@
    <fail unless="available.antcontrib">****************
       
       Can't find antcontrib</fail>
-
+   <available classname="com.oopsconsultancy.xmltask.ant.XmlTask" property="available.xmltask" classpathref="main.classpath"/>
+   <fail unless="available.xmltask">****************
+      
+      Can't find xmltask</fail>
+   
+   
    <!-- declare extra tasks -->
    <taskdef resource="net/sf/antcontrib/antlib.xml" classpathref="main.classpath"/>
-   
-   
-   
-   
-   
-   
-   
+   <taskdef name="xmltask" classname="com.oopsconsultancy.xmltask.ant.XmlTask" classpathref="main.classpath"/>
    
    <import file="build-import-utilities.xml"/>
    
