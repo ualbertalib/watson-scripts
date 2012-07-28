@@ -134,6 +134,10 @@
       
       <property name="bag.command" value="create"/>
       <property name="bag.params" value="${dir.bag} ${dir.images.source}/*"/>
+      
+      <!-- remove evil .DS_Store files - TODO same for Windows thumbnail files -->
+      <delete dir="${dir.images.source}" includes="**/.DS_Store" defaultexcludes="no"/>
+      
       <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
       <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" output="${logfile}">
          <jvmarg value="-Dclassworlds.conf=config/bag.classworlds.conf"/>
@@ -168,6 +172,7 @@
          </catch>
       </trycatch>
       <!-- bagit code doesn't put line breaks between file reports in output -->
+      <!-- TODO test whether this is still necessary; create faulty test bags for automated testing -->
       <replace file="${logfile}" token="Fixity failure" value="&#x0a;Fixity failure"/>
       <replace file="${logfile}" token=" File data/" value="&#x0a;File data/"/>
       <replace file="${logfile}" token=" Bag has file" value="&#x0a;Bag has file"/>
@@ -177,6 +182,10 @@
    <!-- scp target -->
    
    <target name="scp-upload">
+      <!-- remove .DS_Store files, in case you've inspected the bag in Finder; 
+         defaultexcludes="no" is necessary because .DS_Store is by default 
+         excluded from all directory-based tasks -->
+      <delete dir="${dir.bag}" includes="**/.DS_Store" defaultexcludes="no"/>
       <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}">
          <fileset dir="${dir.bag}" includes="**/*"/>
       </scp> 
