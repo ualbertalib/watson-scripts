@@ -123,38 +123,6 @@
       </java>
    </target>
    
-   <!-- bagit target: master - TODO add target to create bags (using same bagit library) -->
-   
-   <target name="bagit-verify-master" description="verify BagIt bags on portable drive" depends="init">
-      <property name="targetname" value="bagit-verify"/>
-      <property name="drive" location="e:/"/>
-      <property name="dirset" value="*/*/*"/>
-      <property name="bag.command" value="verifyvalid"/>
-      
-      <dirset id="bagit-verify-dirset" dir="${drive}">
-         <include name="${dirset}"/>
-      </dirset>
-      
-      <resourcecount property="dirsetcount">
-         <dirset refid="bagit-verify-dirset"/>
-      </resourcecount>
-      <property name="logname" value="${logshome}/processing/${targetname}-${host}-${run.tstamp}.log"/>
-      <record name="${logname}" action="start" append="no"/>
-      <antcall target="run-start"/>
-      
-      
-      <echo>${bag.command}</echo>
-      <mkdir dir="${logshome}"/>
-      <defaultexcludes add="**/System Volume Information/**"/>
-      <defaultexcludes add="**/WD_Setup_Do_Not_Remove/**"/>
-      <subant inheritall="yes" genericantfile="build.xml" target="bagit-verify">
-         <dirset refid="bagit-verify-dirset"/>
-      </subant>
-      
-      <antcall target="run-end"/>
-      <antcall target="email-result" inheritall="true"/>
-      
-   </target>
    
    
    <!-- bagit targets: directory level -->
@@ -179,38 +147,18 @@
    </target>
    
    <target name="bagit-verify">
-      <basename property="dirname" file="."/>
-      <property name="logfile" value="${logshome}/processing/bagit-${dirname}.log"/>
-      <condition property="is.bag">
-         <available file="bagit.txt"/>
-      </condition>
-      <condition property="is.verified">
-         <or>
-            <and>
-               <isset property="is.bag"/>
-               <available file="bag_verified"/>
-               <not>
-                  <isset property="force"/>
-               </not>
-            </and>
-            <and>
-               <isset property="skip.logged"/>
-               <available file="${logfile}"/>
-            </and>
-         </or>
-      </condition>
-      <echo>${publication}/${dirname} is.bag: ${is.bag}; is.verified: ${is.verified}</echo>
-      <antcall target="bagit-verify-do-it"/>
-   </target>
-   <target name="bagit-verify-do-it" unless="is.verified">
-      <!-- note: inputstring is necessary to prevent forked java process from hanging when running in background -->
-      <java classpath="${martinihome}/lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" output="${logfile}">
-         <jvmarg value="-Dclassworlds.conf=${martinihome}/lib/bag.classworlds.conf"/>
-         <jvmarg value="-Dapp.home=${martinihome}"/>
-         <!--<jvmarg value="-Dlog_file=${logshome}/processing/bagit-${dirname}.log"/>-->
-         <arg value="${bag.command}"/>
-         <arg value="."/>
+      <mkdir dir="${dir.logs}"/>
+      <property name="logfile" value="${dir.logs}/bagit-verify.log"/>
+
+
+      <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
+      <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" output="${logfile}">
+         <jvmarg value="-Dclassworlds.conf=config/bag.classworlds.conf"/>
+         <jvmarg value="-Dapp.home=."/>
+         <arg value="verifyvalid"/>
+         <arg value="${dir.bag}"/>
       </java>
+      
       <trycatch property="exc">
          <try>
             <touch file="bag_verified"/>
@@ -226,4 +174,11 @@
       <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>
    </target>
    
+   <!-- scp target -->
+   
+   <target name="scp-upload">
+      <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}">
+         <fileset dir="${dir.bag}" includes="**/*"/>
+      </scp> 
+   </target>
 </project>

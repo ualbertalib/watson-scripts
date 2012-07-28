@@ -19,6 +19,10 @@
    <property name="xmltask" value="xmltask.jar"/>
    <property name="xmltask-md5" value="b2cda8a5800858d503a8b11253a3e642"/>
    
+   <property name="jsch" value="jsch-0.1.48.jar"/>
+   <property name="jsch-md5" value="951107a1a1fbf40a107ffd5a501590be"/>
+   
+   
    <target name="install">
       <!-- fetch dependencies and install -->
       <mkdir dir="lib"/>
@@ -89,12 +93,24 @@
       <!-- get xmltask -->
       <mkdir dir="dependencies/xmltask"/>
       <get src="http://downloads.sourceforge.net/project/xmltask/xmltask/1.16/${xmltask}" dest="dependencies/xmltask/${xmltask}" usetimestamp="true"/>
-      <condition property="antunit-ok">
+      <condition property="xmltask-ok">
          <checksum file="dependencies/xmltask/${xmltask}" property="${xmltask-md5}"/>
       </condition>
-      <fail unless="antunit-ok" message="dependencies/${xmltask} checksum is not correct"/>
+      <fail unless="xmltask-ok" message="dependencies/${xmltask} checksum is not correct"/>
       <copy todir="lib">
          <fileset dir="dependencies/xmltask" includes="xmltask.jar"/>
       </copy>
+      
+      <!-- get jsch for scp task -->
+      <mkdir dir="dependencies/jsch"/>
+      <get src="http://downloads.sourceforge.net/project/jsch/jsch.jar/0.1.48/${jsch}" dest="dependencies/jsch/${jsch}" usetimestamp="true"/>
+      <condition property="jsch-ok">
+         <checksum file="dependencies/jsch/${jsch}" property="${jsch-md5}"/>
+      </condition>
+      <fail unless="jsch-ok" message="dependencies/jsch/${jsch} checksum is not correct"/>
+      <copy todir="lib">
+         <fileset dir="dependencies/jsch" includes="${jsch}"/>
+      </copy>
+      
    </target>
 </project>
