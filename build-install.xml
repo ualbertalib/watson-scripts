@@ -23,6 +23,8 @@
       <!-- fetch dependencies and install -->
       <mkdir dir="lib"/>
       <mkdir dir="dependencies"/>
+      
+      <!-- get bagit -->
       <get src="http://downloads.sourceforge.net/project/loc-xferutils/loc-bil-java-library/4.3/${bagit}" dest="dependencies" usetimestamp="true"/>
       <condition property="bagit-ok">
          <checksum file="dependencies/${bagit}" property="${bagit-md5}"/>

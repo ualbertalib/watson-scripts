@@ -159,6 +159,25 @@
    
    <!-- bagit targets: directory level -->
    
+   <target name="bagit-create">
+      <mkdir dir="${dir.logs}"/>
+      <mkdir dir="${dir.bag}"/>
+      <property name="logfile" value="${dir.logs}/bagit-create.log"/>
+      
+      <property name="bag.command" value="create"/>
+      <property name="bag.params" value="${dir.bag} ${dir.images.source}/*"/>
+      <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
+      <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" output="${logfile}">
+         <jvmarg value="-Dclassworlds.conf=config/bag.classworlds.conf"/>
+         <jvmarg value="-Dapp.home=."/>
+         <!--<jvmarg value="-Dlog_file=${logshome}/processing/bagit-${dirname}.log"/>-->
+         <arg value="${bag.command}"/>
+         <arg value="${dir.bag}"/>
+         <arg value="${dir.images.source}/*"/>
+      </java>
+      
+   </target>
+   
    <target name="bagit-verify">
       <basename property="dirname" file="."/>
       <property name="logfile" value="${logshome}/processing/bagit-${dirname}.log"/>

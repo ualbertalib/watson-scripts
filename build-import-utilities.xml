@@ -14,27 +14,6 @@
       </tstamp> 
    </target>
    
-   <target name="test.set.index">
-      <fail unless="index"
-         message="Run error!
-         
-         Error: You must set index property
-         Use '-Dindex=peelbib' or '-Dindex=newspapers'"/>
-      <!-- set index properties -->
-      <property name="solr.old" value="${solr.old.root}/${index}-old/index"/>
-      <property name="solr.production" value="${solr.production.root}/${index}/index"/>
-      <property name="solr.staging" value="${solr.staging.root}/${index}-staging/index"/>
-      <property name="solr.merged" value="${solr.merged.root}/${index}-merged/index"/>
-      <property name="solr.new" value="${solr.new.root}/${index}-new/index"/>
-      <!-- propagate from staging index (master) to production index (slave) -->
-      <property name="solr.scripts.master" value="${solr.staging.root}/${index}-staging/bin"/>
-      <property name="solr.scripts.slave" value="${solr.production.root}/${index}/bin"/>
-      
-      <property name="solr.instance" value="${solr.instance.root}/solr-${index}"/>
-      <property name="solr.instance.new" value="${solr.instance.root}/solr-${index}-new"/>
-      <property name="solr.instance.staging" value="${solr.instance.root}/solr-${index}-staging"/>
-   </target>
-   
    <!--	*************************************************************************************************
       *		logtimestamp																					              *
       *		- add a timestamp line to the current log												          *
