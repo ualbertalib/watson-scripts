@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project basedir="." default="dist" name="Watson">
+<project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit">
    <property file="build.properties"/>
    
    <!-- add the jars in the lib directory to the classpath -->
@@ -21,9 +21,11 @@
       Can't find xmltask</fail>
    
    
+   
    <!-- declare extra tasks -->
    <taskdef resource="net/sf/antcontrib/antlib.xml" classpathref="main.classpath"/>
    <taskdef name="xmltask" classname="com.oopsconsultancy.xmltask.ant.XmlTask" classpathref="main.classpath"/>
+   <taskdef resource="org/apache/ant/antunit/antlib.xml" uri="antlib:org.apache.ant.antunit" classpath="lib/ant-antunit-1.2.jar" />
    
    <import file="build-import-utilities.xml"/>
    
@@ -121,6 +123,21 @@
          <arg value="-q:xquery/test.xquery"/>
          <arg value="-o:output/jhove-parse.xml"/>
       </java>
+      <!-- get absolute path of source directory -->
+      <property name="absolute.path.source" location="${dir.images.source}"/>
+      <!-- TODO make sure the path handling works on Windows: may need to use ${file.separator} instead of / in xsl -->
+      <xslt in="output/jhove-parse.xml" out="output/fileset-all.xml" style="xsl/make-filesets.xsl">
+         <param name="sel" expression="all"/>
+         <param name="basedir" expression="${absolute.path.source}"/>
+      </xslt>
+      <xslt in="output/jhove-parse.xml" out="output/fileset-good.xml" style="xsl/make-filesets.xsl">
+         <param name="sel" expression="good"/>
+         <param name="basedir" expression="${absolute.path.source}"/>
+      </xslt>
+      <xslt in="output/jhove-parse.xml" out="output/fileset-bad.xml" style="xsl/make-filesets.xsl">
+         <param name="sel" expression="bad"/>
+         <param name="basedir" expression="${absolute.path.source}"/>
+      </xslt>
    </target>
    
    
@@ -153,7 +170,7 @@
    <target name="bagit-verify">
       <mkdir dir="${dir.logs}"/>
       <property name="logfile" value="${dir.logs}/bagit-verify.log"/>
-
+      <echo>Logfile: ${logfile}</echo>
 
       <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
       <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" output="${logfile}">
@@ -163,22 +180,22 @@
          <arg value="${dir.bag}"/>
       </java>
       
-      <trycatch property="exc">
-         <try>
-            <touch file="bag_verified"/>
-         </try>
-         <catch>
-            <echo>${exc}</echo>
-         </catch>
-      </trycatch>
       <!-- bagit code doesn't put line breaks between file reports in output -->
       <!-- TODO test whether this is still necessary; create faulty test bags for automated testing -->
-      <replace file="${logfile}" token="Fixity failure" value="&#x0a;Fixity failure"/>
+ <!--     <replace file="${logfile}" token="Fixity failure" value="&#x0a;Fixity failure"/>
       <replace file="${logfile}" token=" File data/" value="&#x0a;File data/"/>
       <replace file="${logfile}" token=" Bag has file" value="&#x0a;Bag has file"/>
-      <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>
+      <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>-->
    </target>
    
+   <target name="bagit-verify-test">
+      <au:logcapturer/>
+      <echo message=">> bagit-verify-test"/>
+      <antcall target="bagit-verify" inheritall="yes">
+         <param name="dir.bag" value="tests/bag-missingfile"/>
+      </antcall>
+      <au:assertLogContains text="Payload manifest manifest-md5.txt contains missing file(s)" level="info"/>
+   </target>
    <!-- scp target -->
    
    <target name="scp-upload">
