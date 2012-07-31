@@ -39,7 +39,20 @@
       </scriptselector>
    </selector>
    
-
+   <!-- script selector - to select the images which has a web presentation -->
+   <selector id="tiff.url.exists.selector">
+      <scriptselector language="javascript" xml:space="preserve">
+         var dirsource = project.getProperty("dir.images.source").replace("\\","/");
+         var imagepath = filename.replace("\\","/").replace("dirsource", "");
+         var url= "http://peel.library.ualberta.ca/pcimages/PC" + imagepath;
+         var httpRequest= new XMLHttpRequest();
+         httpRequest.open("GET", url, false);
+         httpRequest.send();
+         var httpStatus = false;
+         if (httpRequest.status == 200) { httpStatus = true;}
+         self.setSelected(httpStatus);
+      </scriptselector>
+   </selector>
 
 
    <!-- basic copy target -->
@@ -118,13 +131,15 @@
       </java>
    </target>
    <target name="jhove-parse">
-      <mkdir dir="output"/>   
+      <!--<mkdir dir="output"/>   
       <java classpathref="main.classpath" classname="net.sf.saxon.Query">
          <arg value="-q:xquery/test.xquery"/>
          <arg value="-o:output/jhove-parse.xml"/>
-      </java>
+      </java>-->
       <!-- get absolute path of source directory -->
+      
       <property name="absolute.path.source" location="${dir.images.source}"/>
+      <echo>${absolute.path.source}</echo>
       <!-- TODO make sure the path handling works on Windows: may need to use ${file.separator} instead of / in xsl -->
       <xslt in="output/jhove-parse.xml" out="output/fileset-all.xml" style="xsl/make-filesets.xsl">
          <param name="sel" expression="all"/>
@@ -206,5 +221,33 @@
       <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}">
          <fileset dir="${dir.bag}" includes="**/*"/>
       </scp> 
+   </target>
+   
+   <target name="final-tiff-validation">
+      <!-- load the existing fileset from fileset-good for the tiffs that are validated by JHOVE and should have been uploaded at this point. 
+         Uses a javascript selector to check each file with its corresponding URL. Delete the files when the url exists. 
+         Generate reports of files that are validated and not validated  -->
+      <fileset includesfile="output/fileset-good.xml" id="tiffs.validated">
+         <selector refid="tiff.url.exists.selector"/> 
+      </fileset>
+      <pathconvert pathsep="${line.separator}" property="list.tiffs.validated" refid="tiffs.validated">
+         <mapper type="flatten" />
+      </pathconvert>
+      <echo file="output/fileset-validatedtiffs.xml" append="false">${list.tiffs.validated}</echo> 
+      
+      <delete><fileset refid="tiffs.validated"/></delete>
+      
+      <fileset includesfile="output/fileset-good.xml" id="tiffs.not.validated">
+         <not>
+            <selector refid="tiff.url.exists.selector"/> 
+         </not>  
+      </fileset>
+      <pathconvert pathsep="${line.separator}" property="list.tiffs.not.validated" refid="tiffs.not.validated">
+         <mapper type="flatten" />
+      </pathconvert>
+      <echo file="output/fileset-notvalidatedtiffs.xml" append="true">${list.tiffs.notvalidated}</echo>     
+      
+      
+      
    </target>
 </project>
