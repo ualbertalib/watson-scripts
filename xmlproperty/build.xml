@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="dist" name="ANTProject">
+ <target name="dist">
+  <xmlproperty file="../metadata/good.xml" prefix="good"/>
+    <echo>${good.jhove.repInfo.status}</echo>
+ </target> 
+</project>

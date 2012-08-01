@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="test" basedir="." default="setUp" xmlns:au="antlib:org.apache.ant.antunit" xmlns="antlib:org.apache.tools.ant">
+   
+   <taskdef resource="org/apache/ant/antunit/antlib.xml" uri="antlib:org.apache.ant.antunit" classpath="lib/ant-antunit-1.2.jar" />
+   <property name="f001.dir" value="bork"/>
+   
+   <target name="setUp">
+      <echo message=" " />
+      <au:logcapturer />
+      
+      <!-- init dir -->
+      <mkdir dir="${f001.dir}" />
+      <au:assertFileExists file="${f001.dir}" />
+      <au:assertFileDoesntExist file="${f001.dir}/.hg" />
+      
+   </target>
+   
+   <!-- create repository -->
+   <target name="testInit">
+      <echo message=">> F001-init testInit" />
+      
+      <touch file="${f001.dir}/.hg" />
+      <au:assertFileExists file="${f001.dir}/.hg" />
+      <touch file="${f001.dir}/init1.txt" />
+      <au:assertLogContains text="unknown init1.txt" level="info" />
+   </target>
+   
+   <target name="tearDown">
+      <delete dir="${f001.dir}" />
+      <au:assertFileDoesntExist file="${f001.dir}" />
+   </target>
+   
+   
+</project>

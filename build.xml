@@ -140,15 +140,15 @@
       <!-- get absolute path of source directory -->
       <property name="absolute.path.source" location="${dir.images.source}"/>
       <!-- TODO make sure the path handling works on Windows: may need to use ${file.separator} instead of / in xsl -->
-      <xslt in="output/jhove-parse.xml" out="output/fileset-all.xml" style="xsl/make-filesets.xsl">
+      <xslt in="output/jhove-parse.xml" out="output/fileset-all.txt" style="xsl/make-filesets.xsl">
          <param name="sel" expression="all"/>
          <param name="basedir" expression="${absolute.path.source}"/>
       </xslt>
-      <xslt in="output/jhove-parse.xml" out="output/fileset-good.xml" style="xsl/make-filesets.xsl">
+      <xslt in="output/jhove-parse.xml" out="output/fileset-good.txt" style="xsl/make-filesets.xsl">
          <param name="sel" expression="good"/>
          <param name="basedir" expression="${absolute.path.source}"/>
       </xslt>
-      <xslt in="output/jhove-parse.xml" out="output/fileset-bad.xml" style="xsl/make-filesets.xsl">
+      <xslt in="output/jhove-parse.xml" out="output/fileset-bad.txt" style="xsl/make-filesets.xsl">
          <param name="sel" expression="bad"/>
          <param name="basedir" expression="${absolute.path.source}"/>
       </xslt>
@@ -228,7 +228,7 @@
       <!-- load the existing fileset from fileset-good for the tiffs that are validated by JHOVE and should have been uploaded at this point. 
          Uses a javascript selector to check each file with its corresponding URL. Delete the files when the url exists. 
          Generate reports of files that are validated and not validated  -->
-      <fileset includesfile="output/fileset-good.xml" id="tiffs.validated">
+      <fileset dir="${dir.images.source}" includesfile="output/fileset-good.txt" id="tiffs.validated">
          <selector refid="tiff.url.exists.selector"/> 
       </fileset>
       <pathconvert pathsep="${line.separator}" property="list.tiffs.validated" refid="tiffs.validated">
@@ -238,7 +238,7 @@
       
       <delete><fileset refid="tiffs.validated"/></delete>
       
-      <fileset includesfile="output/fileset-good.xml" id="tiffs.not.validated">
+      <fileset dir="${dir.images.source}" includesfile="output/fileset-good.txt" id="tiffs.not.validated">
          <not>
             <selector refid="tiff.url.exists.selector"/> 
          </not>  
@@ -269,26 +269,40 @@
    </target>
    
    <!-- test jhove output -->
-   <target name="testMetadata">
+   <target name="test_Metadata" depends="metadata">
       <!-- run metadata target, then test the output xml files -->
-      <antcall target="metadata"/>
       
       <!-- make sure jhove output files exist -->
-      <au:assertFileExists file="metadata/good.xml"/>
-      <au:assertFileExists file="metadata/nontiff.xml"/>
-      <au:assertFileExists file="metadata/truncatedtiff.xml"/>
+      <au:assertFileExists file="${dir.metadata}/good.xml"/>
+      <au:assertFileExists file="${dir.metadata}/nontiff.xml"/>
+      <au:assertFileExists file="${dir.metadata}/truncatedtiff.xml"/>
 
       <!-- test status and message elements -->
       <!-- note: xmlproperty ignores namespaces -->
-      <xmlproperty prefix="good" file="metadata/good.xml"/>
+      <xmlproperty prefix="good" file="${dir.metadata}/good.xml"/>
       <au:assertPropertyEquals name="good.jhove.repInfo.status" value="Well-Formed and valid"/>
 
-      <xmlproperty prefix="nontiff" file="metadata/nontiff.xml"/>
+      <xmlproperty prefix="nontiff" file="${dir.metadata}/nontiff.xml"/>
       <au:assertPropertyEquals name="nontiff.jhove.repInfo.status" value="Not well-formed"/>
       <au:assertPropertyEquals name="nontiff.jhove.repInfo.messages.message" value="No TIFF header: &lt;?"/>
 
-      <xmlproperty prefix="truncatedtiff" file="metadata/truncatedtiff.xml"/>
+      <xmlproperty prefix="truncatedtiff" file="${dir.metadata}/truncatedtiff.xml"/>
       <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.status" value="Not well-formed"/>
       <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.messages.message" value="Premature EOF"/>
+   </target>
+   
+   <target name="test_jhove-parse" depends="jhove-parse">
+      <fileset dir="${dir.images.source}" includesfile="output/fileset-all.txt" id="tiffs-all"/>
+      <fileset dir="${dir.images.source}" includesfile="output/fileset-good.txt" id="tiffs-good"/>
+      <fileset dir="${dir.images.source}" includesfile="output/fileset-bad.txt" id="tiffs-bad"/>
+
+      <resourcecount property="count-all" refid="tiffs-all"/>
+      <resourcecount property="count-good" refid="tiffs-good"/>
+      <resourcecount property="count-bad" refid="tiffs-bad"/>
+      
+      <au:assertPropertyEquals name="count-all" value="3"/>
+      <au:assertPropertyEquals name="count-good" value="1"/>
+      <au:assertPropertyEquals name="count-bad" value="2"/>
+      
    </target>
 </project>

@@ -3,7 +3,7 @@
    xmlns:xs="http://www.w3.org/2001/XMLSchema"
    xmlns:xd="http://www.oxygenxml.com/ns/doc/xsl"
    exclude-result-prefixes="xs xd"
-   version="2.0">
+   version="1.0">
    <xd:doc scope="stylesheet">
       <xd:desc>
          <xd:p><xd:b>Created on:</xd:b> Jul 30, 2012</xd:p>
@@ -12,13 +12,12 @@
       </xd:desc>
    </xd:doc>
    
-   <xsl:output method="xml" indent="yes"/>
+   <xsl:output method="text"/>
    
    <xsl:param name="sel">all</xsl:param>
    <xsl:param name="basedir">data</xsl:param>
    
    <xsl:template match="/">
-   <fileset id="tiffs-{$sel}" dir="{$basedir}">
       <xsl:choose>
          <xsl:when test="$sel='all'">
             <xsl:apply-templates select="/results/tiff"/>
@@ -30,10 +29,10 @@
             <xsl:apply-templates select="/results/tiff[not(status='Well-Formed and valid')]"/>
          </xsl:when>
       </xsl:choose>
-   </fileset>
    </xsl:template>
    
    <xsl:template match="tiff">
-      <include name="{substring-after(@uri, concat($basedir, '/'))}"/>
+      <xsl:value-of select="substring-after(@uri, concat($basedir, '/'))"/>
+      <xsl:text>&#x0a;</xsl:text>
    </xsl:template>
 </xsl:stylesheet>
