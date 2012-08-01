@@ -132,25 +132,27 @@
       </java>
    </target>
    <target name="jhove-parse">
-      <mkdir dir="output"/>   
+      <mkdir dir="output"/>
+       <!-- note: the xquery will produce paths using the unix file separator "/", even on Windows -->
       <java classpathref="main.classpath" classname="net.sf.saxon.Query">
          <arg value="-q:xquery/test.xquery"/>
          <arg value="-o:output/jhove-parse.xml"/>
       </java>
       <!-- get absolute path of source directory -->
       <property name="absolute.path.source" location="${dir.images.source}"/>
+       <echo>absolute.path.source: ${absolute.path.source}</echo>
       <!-- TODO make sure the path handling works on Windows: may need to use ${file.separator} instead of / in xsl -->
       <xslt in="output/jhove-parse.xml" out="output/fileset-all.txt" style="xsl/make-filesets.xsl">
          <param name="sel" expression="all"/>
-         <param name="basedir" expression="${absolute.path.source}"/>
+         <param name="basedir-raw" expression="${absolute.path.source}"/>
       </xslt>
       <xslt in="output/jhove-parse.xml" out="output/fileset-good.txt" style="xsl/make-filesets.xsl">
          <param name="sel" expression="good"/>
-         <param name="basedir" expression="${absolute.path.source}"/>
+         <param name="basedir-raw" expression="${absolute.path.source}"/>
       </xslt>
       <xslt in="output/jhove-parse.xml" out="output/fileset-bad.txt" style="xsl/make-filesets.xsl">
          <param name="sel" expression="bad"/>
-         <param name="basedir" expression="${absolute.path.source}"/>
+         <param name="basedir-raw" expression="${absolute.path.source}"/>
       </xslt>
    </target>
    

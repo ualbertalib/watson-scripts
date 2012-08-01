@@ -15,7 +15,10 @@
    <xsl:output method="text"/>
    
    <xsl:param name="sel">all</xsl:param>
-   <xsl:param name="basedir">data</xsl:param>
+   <xsl:param name="basedir-raw">data</xsl:param>
+   
+   <!-- convert Windows paths to Unix, to match output of xquery -->
+    <xsl:variable name="basedir" select="translate($basedir-raw, '\', '/')"/>
    
    <xsl:template match="/">
       <xsl:choose>
