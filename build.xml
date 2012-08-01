@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit">
+<project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit" xmlns:jhove="http://hul.harvard.edu/ois/xml/ns/jhove">
    <property file="build.properties"/>
    
    <!-- add the jars in the lib directory to the classpath -->
@@ -53,6 +53,7 @@
          self.setSelected(httpStatus);
       </scriptselector>
    </selector>
+   
 
 
    <!-- basic copy target -->
@@ -131,15 +132,13 @@
       </java>
    </target>
    <target name="jhove-parse">
-      <!--<mkdir dir="output"/>   
+      <mkdir dir="output"/>   
       <java classpathref="main.classpath" classname="net.sf.saxon.Query">
          <arg value="-q:xquery/test.xquery"/>
          <arg value="-o:output/jhove-parse.xml"/>
-      </java>-->
+      </java>
       <!-- get absolute path of source directory -->
-      
       <property name="absolute.path.source" location="${dir.images.source}"/>
-      <echo>${absolute.path.source}</echo>
       <!-- TODO make sure the path handling works on Windows: may need to use ${file.separator} instead of / in xsl -->
       <xslt in="output/jhove-parse.xml" out="output/fileset-all.xml" style="xsl/make-filesets.xsl">
          <param name="sel" expression="all"/>
@@ -203,6 +202,7 @@
       <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>-->
    </target>
    
+   <!--
    <target name="bagit-verify-test">
       <au:logcapturer/>
       <echo message=">> bagit-verify-test"/>
@@ -211,6 +211,7 @@
       </antcall>
       <au:assertLogContains text="Payload manifest manifest-md5.txt contains missing file(s)" level="info"/>
    </target>
+   -->
    <!-- scp target -->
    
    <target name="scp-upload">
@@ -249,5 +250,45 @@
       
       
       
+   </target>
+   
+   
+   <!-- Tests -->
+   <target name="ready-to-run">
+      <!-- preparation: delete jhove output files from previous run -->
+      <delete>
+         <fileset dir="metadata" includes="*.xml"/>
+      </delete>
+   </target>
+   
+   <target name="antunit" depends="ready-to-run" xmlns:au="antlib:org.apache.ant.antunit">
+      <au:antunit>
+         <fileset file="${ant.file}"/>
+         <au:plainlistener/>
+      </au:antunit>
+   </target>
+   
+   <!-- test jhove output -->
+   <target name="testMetadata">
+      <!-- run metadata target, then test the output xml files -->
+      <antcall target="metadata"/>
+      
+      <!-- make sure jhove output files exist -->
+      <au:assertFileExists file="metadata/good.xml"/>
+      <au:assertFileExists file="metadata/nontiff.xml"/>
+      <au:assertFileExists file="metadata/truncatedtiff.xml"/>
+
+      <!-- test status and message elements -->
+      <!-- note: xmlproperty ignores namespaces -->
+      <xmlproperty prefix="good" file="metadata/good.xml"/>
+      <au:assertPropertyEquals name="good.jhove.repInfo.status" value="Well-Formed and valid"/>
+
+      <xmlproperty prefix="nontiff" file="metadata/nontiff.xml"/>
+      <au:assertPropertyEquals name="nontiff.jhove.repInfo.status" value="Not well-formed"/>
+      <au:assertPropertyEquals name="nontiff.jhove.repInfo.messages.message" value="No TIFF header: &lt;?"/>
+
+      <xmlproperty prefix="truncatedtiff" file="metadata/truncatedtiff.xml"/>
+      <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.status" value="Not well-formed"/>
+      <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.messages.message" value="Premature EOF"/>
    </target>
 </project>
