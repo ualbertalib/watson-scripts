@@ -167,18 +167,22 @@
       
       <property name="bag.command" value="create"/>
       <property name="bag.params" value="${dir.bag} ${dir.images.source}/*"/>
-      
+      <echo>${bag.params}</echo>
       <!-- remove evil .DS_Store files - TODO same for Windows thumbnail files -->
       <delete dir="${dir.images.source}" includes="**/.DS_Store" defaultexcludes="no"/>
       
       <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
-      <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" output="${logfile}">
+      <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" 
+         output="${logfile}" failonerror="true">
          <jvmarg value="-Dclassworlds.conf=config/bag.classworlds.conf"/>
          <jvmarg value="-Dapp.home=."/>
          <!--<jvmarg value="-Dlog_file=${logshome}/processing/bagit-${dirname}.log"/>-->
          <arg value="${bag.command}"/>
          <arg value="${dir.bag}"/>
          <arg value="${dir.images.source}/*"/>
+  
+         <arg value="--log-verbose"/>
+         <arg value="--verbose"/>
       </java>
       
    </target>
@@ -189,12 +193,18 @@
       <echo>Logfile: ${logfile}</echo>
 
       <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
-      <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" output="${logfile}">
+      <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" 
+         failonerror="true" inputstring="" output="${dir.logs}/bagit-verify.log"
+         >
          <jvmarg value="-Dclassworlds.conf=config/bag.classworlds.conf"/>
          <jvmarg value="-Dapp.home=."/>
          <arg value="verifyvalid"/>
          <arg value="${dir.bag}"/>
+         <arg value="--noresultfile"/>
+         <arg value="--log-verbose"/>
+         <arg value="--verbose"/>
       </java>
+    
       
       <!-- bagit code doesn't put line breaks between file reports in output -->
       <!-- TODO test whether this is still necessary; create faulty test bags for automated testing -->
@@ -204,16 +214,7 @@
       <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>-->
    </target>
    
-   <!--
-   <target name="bagit-verify-test">
-      <au:logcapturer/>
-      <echo message=">> bagit-verify-test"/>
-      <antcall target="bagit-verify" inheritall="yes">
-         <param name="dir.bag" value="tests/bag-missingfile"/>
-      </antcall>
-      <au:assertLogContains text="Payload manifest manifest-md5.txt contains missing file(s)" level="info"/>
-   </target>
-   -->
+
    <!-- scp target -->
    
    <target name="scp-upload">
@@ -249,29 +250,37 @@
          <mapper type="flatten" />
       </pathconvert>
       <echo file="output/fileset-notvalidatedtiffs.xml" append="true">${list.tiffs.notvalidated}</echo>     
-      
-      
-      
    </target>
    
    
    <!-- Tests -->
-   <target name="ready-to-run">
+   <target name="setUp">
       <!-- preparation: delete jhove output files from previous run -->
+      <echo>Set Up</echo>
       <delete>
-         <fileset dir="metadata" includes="*.xml"/>
+         <fileset dir="${dir.metadata}" includes="*.xml"/>
+         <fileset dir="output" includes="**/*"/>
       </delete>
+      <delete dir="output/bag-create"/>
    </target>
    
-   <target name="antunit" depends="ready-to-run" xmlns:au="antlib:org.apache.ant.antunit">
+   <target name="antunit" xmlns:au="antlib:org.apache.ant.antunit">
       <au:antunit>
          <fileset file="${ant.file}"/>
          <au:plainlistener/>
       </au:antunit>
    </target>
    
+   <!-- test properties -->
+   <target name="test_properties">
+      <au:assertPropertySet name="dir.images.source"/>
+      <au:assertPropertySet name="dir.metadata"/>
+      <au:assertPropertySet name="dir.logs"/>
+      <au:assertPropertySet name="dir.bag"/>
+   </target>
+   
    <!-- test jhove output -->
-   <target name="test_Metadata" depends="metadata">
+   <target name="test_metadata" depends="metadata">
       <!-- run metadata target, then test the output xml files -->
       
       <!-- make sure jhove output files exist -->
@@ -293,7 +302,7 @@
       <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.messages.message" value="Premature EOF"/>
    </target>
    
-   <target name="test_jhove-parse" depends="jhove-parse">
+   <target name="test_jhove-parse" depends="metadata,jhove-parse">
       <fileset dir="${dir.images.source}" includesfile="output/fileset-all.txt" id="tiffs-all"/>
       <fileset dir="${dir.images.source}" includesfile="output/fileset-good.txt" id="tiffs-good"/>
       <fileset dir="${dir.images.source}" includesfile="output/fileset-bad.txt" id="tiffs-bad"/>
@@ -306,5 +315,62 @@
       <au:assertPropertyEquals name="count-good" value="1"/>
       <au:assertPropertyEquals name="count-bad" value="2"/>
       
+   </target>
+   
+   <target name="test_bagit-verify-good">
+      <antcall target="bagit-verify" inheritall="yes">
+         <param name="dir.bag" value="tests/bag-good"/>
+      </antcall>
+   </target>
+   
+   <target name="test_bagit-verify-extrafile">
+      <au:expectfailure>
+         <antcall target="bagit-verify" inheritall="yes">
+            <param name="dir.bag" value="tests/bag-extrafile"/>
+         </antcall>
+      </au:expectfailure>
+      <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
+      <au:assertPropertyContains name="log" value="Payload file data/extrafile.txt not found in any payload manifest."/>
+   </target>   
+
+   <target name="test_bagit-verify-missingfile">
+      <au:expectfailure>
+         <antcall target="bagit-verify" inheritall="yes">
+            <param name="dir.bag" value="tests/bag-missingfile"/>
+         </antcall>
+      </au:expectfailure>
+      <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
+      <au:assertPropertyContains name="log" value="Payload manifest manifest-md5.txt contains missing file(s): [data/test1.txt]"/>
+   </target>
+
+   <target name="test_bagit-verify-fixity">
+      <au:expectfailure>
+         <antcall target="bagit-verify" inheritall="yes">
+            <param name="dir.bag" value="tests/bag-fixity"/>
+         </antcall>
+      </au:expectfailure>
+      <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
+      <au:assertPropertyContains name="log" value="Payload manifest manifest-md5.txt contains invalid file(s): [data/test1.txt]"/>
+   </target>   
+   
+   <target name="test_bagit-verify-tagfixity">
+      <au:expectfailure>
+         <antcall target="bagit-verify" inheritall="yes">
+            <param name="dir.bag" value="tests/bag-tagfixity"/>
+         </antcall>
+      </au:expectfailure>
+      <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
+      <au:assertPropertyContains name="log" value="Tag manifest tagmanifest-md5.txt contains invalid files: [bag-info.txt]"/>
+   </target>
+
+   <target name="test_bagit-create">
+      <antcall target="bagit-create" inheritall="yes">
+         <param name="dir.bag" value="output/bag-create"/>
+         <param name="dir.images.source" value="tests/data"/> 
+      </antcall>
+      <antcall target="bagit-verify" inheritall="yes">
+         <param name="dir.bag" value="output/bag-create"/>
+      </antcall>
+      <au:assertFilesMatch actual="output/bag-create/manifest-md5.txt" expected="tests/bag-create/manifest-md5.txt"/>
    </target>
 </project>
