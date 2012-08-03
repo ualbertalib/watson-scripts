@@ -176,6 +176,8 @@
          output="${logfile}" failonerror="true">
          <jvmarg value="-Dclassworlds.conf=config/bag.classworlds.conf"/>
          <jvmarg value="-Dapp.home=."/>
+          <!-- force unix line endings - needed to get same md5 hashes in output of test for bagit-create -->
+          <jvmarg value="-Dline.separator=&#10;"/>
          <!--<jvmarg value="-Dlog_file=${logshome}/processing/bagit-${dirname}.log"/>-->
          <arg value="${bag.command}"/>
          <arg value="${dir.bag}"/>
