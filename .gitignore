@@ -5,6 +5,7 @@ dependencies/
 output/
 bag/
 logs/
+data/
 *~
 
 bag_verified
