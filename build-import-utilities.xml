@@ -11,6 +11,7 @@
          <format property="day.tstamp" pattern="yyyy-MM-dd"/>
       <!-- timestamp suitable for use as unique filename for this run -->
          <format property="filename.tstamp" pattern="yyyy-MM-dd-HH-mm-ss-SSS"/>
+         <format property="run.path" pattern="yyyy/MM/dd/MM-dd-HH-mm-ss-SSS"/>
       </tstamp> 
    </target>
    

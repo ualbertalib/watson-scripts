@@ -96,6 +96,27 @@
    </target>
    
    
+   <!-- run -->
+   <target name="run" description="Do a run" depends="init">
+      <mkdir dir="${dir.data}"/>
+      <property name="dir.run" value="${dir.data}/run/${run.path}"/>
+      <property name="log.run" value="${dir.logs}/${filename.tstamp}.log"/>
+      <echo>Logging to ${log.run}</echo>
+      <record action="start" name="${log.run}"/> 
+      <antcall target="metadata" inheritall="true">
+         <param name="dir.metadata" value="${dir.run}/metadata"/>
+      </antcall>
+      <antcall target="bagit-create" inheritall="true">
+         <param name="dir.bag" value="${dir.run}/bag"/>
+      </antcall>
+      <tstamp>
+         <format property="end.tstamp" pattern="yyyy-MM-dd'T'HH:mm:ss"/>
+      </tstamp>
+      <echo>End run: ${end.tstamp}</echo>
+      <record action="stop" name="${log.run}"/> 
+      <echo>Run log: ${log.run}</echo>
+   </target>
+   
    
    
    
@@ -168,8 +189,8 @@
       <property name="bag.command" value="create"/>
       <property name="bag.params" value="${dir.bag} ${dir.images.source}/*"/>
       <echo>${bag.params}</echo>
-      <!-- remove evil .DS_Store files - TODO same for Windows thumbnail files -->
-      <delete dir="${dir.images.source}" includes="**/.DS_Store" defaultexcludes="no"/>
+      <!-- remove evil .DS_Store and Thumbs.db files -->
+      <delete dir="${dir.images.source}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
       
       <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
       <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" 
