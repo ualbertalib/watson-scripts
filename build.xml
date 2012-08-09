@@ -117,7 +117,17 @@
       <echo>Run log: ${log.run}</echo>
    </target>
    
-   
+    <target name="prep" description="Create directories, copy content">
+        <mkdir dir="${dir.logs}"/>
+        <delete dir="${dir.bag}"/>
+        <mkdir dir="${dir.bag}"/>
+        
+        <copy todir="${dir.bag}" preservelastmodified="true" includeemptydirs="true" verbose="true">
+            <fileset dir="${dir.images.source}" includes="**/*"/>
+        </copy>
+    </target>
+    
+    
    
    
    <!-- JHOVE targets -->
@@ -133,9 +143,11 @@
    </target>
    <!-- utility task for metadata: this allows us to do an uptodate check, so the metadata won't be recreated if the TIFF hasn't changed -->
    <target name="jhove-single">
-      <!-- get filename without path or extension-->
-      <propertyregex property="filename" input="${tiffile}" regexp="(.*)\${file.separator}(.*)\.[tT][iI][fF][fF]?" select="\2"/>
-      <uptodate property="jhove.uptodate" srcfile="${tiffile}" targetfile="${dir.metadata}${file.separator}${filename}.xml"/>
+       <propertyregex property="filename" input="${tiffile}" regexp="${dir.images.source}\${file.separator}(.*)\.[tT][iI][fF][fF]?" select="\1"/>
+       <propertyregex property="dirname" input="${tiffile}" regexp="${dir.images.source}\${file.separator}(.*)\${file.separator}.*\.[tT][iI][fF][fF]?" select="\1"/>
+       <echo>dir: ${dirname}</echo>
+       <mkdir dir="${dir.metadata}/${dirname}"/>
+       <uptodate property="jhove.uptodate" srcfile="${tiffile}" targetfile="${dir.metadata}${file.separator}${filename}.xml"/>
       <antcall target="jhove-single-do-it" inheritall="true"/>
    </target>
    <!-- utility task for metadata: create the metadata unless we are already uptodate -->
@@ -178,14 +190,16 @@
    </target>
    
    
-   
    <!-- bagit targets: directory level -->
    
    <target name="bagit-create">
-      <mkdir dir="${dir.logs}"/>
-      <mkdir dir="${dir.bag}"/>
-      <property name="logfile" value="${dir.logs}/bagit-create.log"/>
-      
+       
+       <mkdir dir="${dir.logs}"/>
+       <delete dir="${dir.bag}"/>
+       <mkdir dir="${dir.bag}"/>
+       
+       <property name="logfile" value="${dir.logs}/bagit-create.log"/>
+       
       <property name="bag.command" value="create"/>
       <property name="bag.params" value="${dir.bag} ${dir.images.source}/*"/>
       <echo>${bag.params}</echo>
@@ -203,7 +217,8 @@
          <arg value="${bag.command}"/>
          <arg value="${dir.bag}"/>
          <arg value="${dir.images.source}/*"/>
-  
+          <arg value="${dir.metadata}/*"/>
+          
          <arg value="--log-verbose"/>
          <arg value="--verbose"/>
       </java>
