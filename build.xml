@@ -391,13 +391,10 @@
    </target>
 
    <target name="test_bagit-create">
-      <!-- make sure we have an empty directory to use as the metadata dir, so we don't add any metadata files -->
-      <mkdir dir="tests/empty"/>
-      <delete dir="tests/empty" includes="**/*"/>
       <antcall target="bagit-create" inheritall="yes">
          <param name="dir.bag" value="output/bag-create"/>
          <param name="dir.images.source" value="tests/data"/> 
-         <param name="dir.metadata" value="tests/empty"/>
+         <param name="dir.metadata" value="tests/data"/>
       </antcall>
       <antcall target="bagit-verify" inheritall="yes">
          <param name="dir.bag" value="output/bag-create"/>
