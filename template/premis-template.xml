@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<premis xmlns="info:lc/xmlns/premis-v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.0">
+    <!-- premis file object -->
+    <object xsi:type="file">
+        <objectIdentifier>
+            
+        </objectIdentifier>
+        <objectCharacteristics>
+            <compositionLevel>0</compositionLevel>
+            <fixity>
+                <messageDigestAlgorithm>MD5</messageDigestAlgorithm>
+                <messageDigest/>
+                <messageDigestOriginator>Archive</messageDigestOriginator>
+            </fixity>
+            <fixity>
+                <messageDigestAlgorithm>SHA-1</messageDigestAlgorithm>
+                <messageDigest/>
+                <messageDigestOriginator>Archive</messageDigestOriginator>
+            </fixity>
+            <size/>
+            <format></format>
+        </objectCharacteristics>
+        <originalName/>
+    </object>
+    <!-- premis bitstream object -->
+    <object xsi:type="bitstream">
+        <objectIdentifier>
+            <objectIdentifierType/>
+            <objectIdentifierValue/>
+        </objectIdentifier>
+        <objectCharacteristics>
+            <compositionLevel/>
+            <format>
+                <formatDesignation>
+                    <formatName/>
+                </formatDesignation>
+            </format>
+            <objectCharacteristicsExtension>
+            </objectCharacteristicsExtension>
+        </objectCharacteristics>
+    </object>
+    <!-- premis event -->
+    
+    <!-- premis agent -->
+    
+</premis>

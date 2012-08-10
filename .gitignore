@@ -6,6 +6,7 @@ output/
 bag/
 logs/
 data/
+premis/
 *~
 
 bag_verified

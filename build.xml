@@ -324,20 +324,79 @@
     </target>
     
     <target name="premis-copy">
-        <propertyregex property="filename" input="${jhovemetadata}" regexp="(.*)\${file.separator}(.*\.xml)" select="\2"/>
+        <propertyregex property="filename" input="${jhovemetadata}" regexp="${dir.metadata}\${file.separator}(.*\.xml)" select="\1"/>
         <copy file="template/premis-template.xml" tofile="${dir.premis}/${filename}" overwrite="yes"/>
         <xmltask source="${dir.metadata}/${filename}">
             <copy path="//*[local-name()='repInfo']/@uri" property="uri" attrValue="true"/>
             <copy path="//*[local-name()='values'][contains(@type, 'NISOImageMetadata')]/*[local-name()='value']/*[local-name()='mix']" buffer="mix"/>
-        </xmltask>
-        
-        <xmltask source="${dir.premis}/${filename}" dest="${dir.premis}/${filename}">
-            <print path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]"/>
-            <insert path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]/*[local-name()='objectCharacteristics']/*[local-name()='objectCharacteristicsExtension']" buffer="mix"/>
+            <copy path="//*[local-name()='checksum'][contains(@type,'MD5')]/text()" buffer="md5"/>
+            <copy path="//*[local-name()='checksum'][contains(@type,'SHA-1')]/text()" buffer="sha1"/>
+            <copy path="//*[local-name()='size']/text()" buffer="size"/>
+            <copy path="//*[local-name()='format']/text()" property="format"/> 
+            <copy path="//*[local-name()='status']/text()" property="status"/> 
+            <copy path="//*[local-name()='lastModified']/text()" property="date"/>
+            <copy path="/*[local-name()='jhove']/@name" property="tool" attrValue="true"/>
+            <copy path="/*[local-name()='jhove']/@release" property="version" attrValue="true"/>
             
         </xmltask>
         
+        <condition property="set.tiff">
+            
+                <equals arg1="${format}" arg2="TIFF"/>
+        </condition>
         
+      
+        <xmltask source="${dir.premis}/${filename}" dest="${dir.premis}/${filename}">
+            <insert path="//*[local-name()='jhove'][contains(@*[local-name()='type'], 'file')]/*[local-name()='objectIdentifier']">
+                <![CDATA[
+                <objectIdentifierType>URI</objectIdentifierType>
+                <objectIdentifierValue>${uri}</objectIdentifierValue>
+                ]]>
+            </insert>
+            
+            <insert path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]/*[local-name()='objectCharacteristics']/*[local-name()='objectCharacteristicsExtension']" buffer="mix"/>
+            <insert path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='MD5']/*[local-name()='messageDigest']" buffer="md5"/>
+            <insert path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='SHA-1']/*[local-name()='messageDigest']" buffer="sha1"/>
+            <insert path="//*[local-name()='size']" buffer="size"/>
+            <insert path="//*[local-name()='object'][contains(@*[local-name()='type'], 'file')]/*[local-name()='objectCharacteristics']/*[local-name()='format']" if="set.tiff">
+                <![CDATA[ 
+                <formatDesignation>
+               <formatName>Tagged Image File Format</formatName>
+               </formatDesignation>
+               <formatRegistry>
+               <formatRegistryName>http://www.nationalarchives.gov.uk/pronom</formatRegistryName>
+               <formatRegistryKey>fmt/353</formatRegistryKey>
+               </formatRegistry>
+               ]]> 
+            </insert>
+            <copy path="count(//*[local-name()='event'])" property = "event_id"/>
+            
+            <insert path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]" position="after" >
+                <![CDATA[ 
+                <event>
+                    <eventIdentifier>
+                        <eventIdentifierType />
+                        <eventIdentifierValue>validation1</eventIdentifierValue>
+                    </eventIdentifier>
+                    <eventType>validation</eventType>
+                    <eventDateTime>${date}</eventDateTime>
+                    <eventDetail>Validation of Object Components</eventDetail>
+                    <eventOutcomeInformation>
+                    <eventOutcome>${status}</eventOutcome>
+                    </eventOutcomeInformation>
+                    <linkingAgentIdentifier>
+                    <linkingAgentIdentifierType>tool</linkingAgentIdentifierType>
+                    <linkingAgentIdentifierValue>${tool}${version}</linkingAgentIdentifierValue>
+                    </linkingAgentIdentifier>
+                    
+                  </event>
+               ]]> 
+            </insert>
+            
+            <attr path="//*[local-name()='event']" attr="xmlns" remove="true"/>
+        </xmltask>
+        
+       
     </target>
 
 
