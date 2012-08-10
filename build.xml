@@ -117,6 +117,10 @@
         <antcall target="metadata" inheritall="true">
             <param name="dir.metadata" value="${dir.run}/metadata"/>
         </antcall>
+        <antcall target="jhove-parse" inheritall="true">
+            <param name="dir.metadata" value="${dir.run}/metadata"/>
+            <param name="dir.output" value="${dir.run}/output"/>
+        </antcall>
         <antcall target="bagit-create" inheritall="true">
             <param name="dir.bag" value="${dir.run}/bag"/>
         </antcall>
@@ -148,7 +152,6 @@
         <propertyregex property="dirname" input="${tiffile}"
             regexp="${dir.images.source}\${file.separator}(.*)\${file.separator}.*\.[tT][iI][fF][fF]?"
             select="\1"/>
-        <echo>dir: ${dirname}</echo>
         <mkdir dir="${dir.metadata}/${dirname}"/>
         <uptodate property="jhove.uptodate" srcfile="${tiffile}"
             targetfile="${dir.metadata}${file.separator}${filename}.xml"/>
@@ -192,9 +195,12 @@
             <param name="basedir-raw" expression="${absolute.path.source}"/>
         </xslt>
         <xslt in="${dir.output}/jhove-parse.xml" out="${dir.output}/fileset-bad.txt"
-            style="xsl/make-filesets.xsl">
+            style="xsl/make-filesets.xsl" classpathref="main.classpath" >
+            <!-- force use of full xalan, not xsltc, to allow use of redirect extension -->
+            <factory name="org.apache.xalan.processor.TransformerFactoryImpl"/>
             <param name="sel" expression="bad"/>
             <param name="basedir-raw" expression="${absolute.path.source}"/>
+            <param name="output" expression="${dir.output}"/>
         </xslt>
     </target>
 
