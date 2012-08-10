@@ -165,6 +165,8 @@
             <arg value="xml"/>
             <arg value="-m"/>
             <arg value="TIFF-hul"/>
+            <!-- calculate checksums -->
+            <arg value="-k"/>
             <arg value="${tiffile}"/>
         </java>
     </target>
