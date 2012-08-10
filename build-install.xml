@@ -112,5 +112,8 @@
          <fileset dir="dependencies/jsch" includes="${jsch}"/>
       </copy>
       
+        <echo xml:space="preserve">
+            
+Don't forget to copy build.TEMPLATE.properties to build.properties !!! </echo>
    </target>
 </project>
