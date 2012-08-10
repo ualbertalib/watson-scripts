@@ -117,18 +117,6 @@
       <echo>Run log: ${log.run}</echo>
    </target>
    
-    <target name="prep" description="Create directories, copy content">
-        <mkdir dir="${dir.logs}"/>
-        <delete dir="${dir.bag}"/>
-        <mkdir dir="${dir.bag}"/>
-        
-        <copy todir="${dir.bag}" preservelastmodified="true" includeemptydirs="true" verbose="true">
-            <fileset dir="${dir.images.source}" includes="**/*"/>
-        </copy>
-    </target>
-    
-    
-   
    
    <!-- JHOVE targets -->
    <!-- prepare image metadata, using JHove -->
@@ -205,20 +193,21 @@
       <echo>${bag.params}</echo>
       <!-- remove evil .DS_Store and Thumbs.db files -->
       <delete dir="${dir.images.source}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
+      <delete dir="${dir.metadata}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
       
       <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
-      <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring="" 
+      <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" inputstring=""
          output="${logfile}" failonerror="true">
          <jvmarg value="-Dclassworlds.conf=config/bag.classworlds.conf"/>
          <jvmarg value="-Dapp.home=."/>
-          <!-- force unix line endings - needed to get same md5 hashes in output of test for bagit-create -->
-          <jvmarg value="-Dline.separator=&#10;"/>
+         <!-- force unix line endings - needed to get same md5 hashes in output of test for bagit-create -->
+         <jvmarg value="-Dline.separator=&#10;"/>
          <!--<jvmarg value="-Dlog_file=${logshome}/processing/bagit-${dirname}.log"/>-->
          <arg value="${bag.command}"/>
          <arg value="${dir.bag}"/>
          <arg value="${dir.images.source}/*"/>
-          <arg value="${dir.metadata}/*"/>
-          
+         <arg value="${dir.metadata}/*"/>
+
          <arg value="--log-verbose"/>
          <arg value="--verbose"/>
       </java>
@@ -322,20 +311,20 @@
       <!-- run metadata target, then test the output xml files -->
       
       <!-- make sure jhove output files exist -->
-      <au:assertFileExists file="${dir.metadata}/good.xml"/>
-      <au:assertFileExists file="${dir.metadata}/nontiff.xml"/>
-      <au:assertFileExists file="${dir.metadata}/truncatedtiff.xml"/>
+      <au:assertFileExists file="${dir.metadata}/box1/good.xml"/>
+      <au:assertFileExists file="${dir.metadata}/box1/nontiff.xml"/>
+      <au:assertFileExists file="${dir.metadata}/box1/truncatedtiff.xml"/>
 
       <!-- test status and message elements -->
       <!-- note: xmlproperty ignores namespaces -->
-      <xmlproperty prefix="good" file="${dir.metadata}/good.xml"/>
+      <xmlproperty prefix="good" file="${dir.metadata}/box1/good.xml"/>
       <au:assertPropertyEquals name="good.jhove.repInfo.status" value="Well-Formed and valid"/>
 
-      <xmlproperty prefix="nontiff" file="${dir.metadata}/nontiff.xml"/>
+      <xmlproperty prefix="nontiff" file="${dir.metadata}/box1/nontiff.xml"/>
       <au:assertPropertyEquals name="nontiff.jhove.repInfo.status" value="Not well-formed"/>
       <au:assertPropertyEquals name="nontiff.jhove.repInfo.messages.message" value="No TIFF header: &lt;?"/>
 
-      <xmlproperty prefix="truncatedtiff" file="${dir.metadata}/truncatedtiff.xml"/>
+      <xmlproperty prefix="truncatedtiff" file="${dir.metadata}/box1/truncatedtiff.xml"/>
       <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.status" value="Not well-formed"/>
       <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.messages.message" value="Premature EOF"/>
    </target>
@@ -402,9 +391,13 @@
    </target>
 
    <target name="test_bagit-create">
+      <!-- make sure we have an empty directory to use as the metadata dir, so we don't add any metadata files -->
+      <mkdir dir="tests/empty"/>
+      <delete dir="tests/empty" includes="**/*"/>
       <antcall target="bagit-create" inheritall="yes">
          <param name="dir.bag" value="output/bag-create"/>
          <param name="dir.images.source" value="tests/data"/> 
+         <param name="dir.metadata" value="tests/empty"/>
       </antcall>
       <antcall target="bagit-verify" inheritall="yes">
          <param name="dir.bag" value="output/bag-create"/>
