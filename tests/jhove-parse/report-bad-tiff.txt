@@ -1,0 +1,8 @@
+Bad file: box1/nontiff.tiff
+Status: Not well-formed
+Message: No TIFF header: <?
+
+Bad file: box1/truncatedtiff.tiff
+Status: Not well-formed
+Message: Premature EOF
+

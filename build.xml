@@ -469,6 +469,9 @@
         <au:assertPropertyEquals name="count-good" value="1"/>
         <au:assertPropertyEquals name="count-bad" value="2"/>
 
+       <au:assertFilesMatch actual="${dir.output}/report-bad-tiff.txt"
+          expected="tests/jhove-parse/report-bad-tiff.txt"/>
+       
     </target>
 
     <target name="test_bagit-verify-good">
