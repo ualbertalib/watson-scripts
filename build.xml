@@ -51,15 +51,15 @@
     <!-- script selector - to select the images which has a web presentation -->
     <selector id="tiff.url.exists.selector">
         <scriptselector language="javascript" xml:space="preserve">
-         var dirsource = project.getProperty("dir.images.source").replace("\\","/");
-         var imagepath = filename.replace("\\","/").replace("dirsource", "");
-         var url= "http://peel.library.ualberta.ca/pcimages/PC" + imagepath;
-         var httpRequest= new XMLHttpRequest();
-         httpRequest.open("GET", url, false);
-         httpRequest.send();
-         var httpStatus = false;
-         if (httpRequest.status == 200) { httpStatus = true;}
-         self.setSelected(httpStatus);
+         importClass(java.net.URL);
+         importClass(java.net.HttpURLConnection);
+         var url = new URL ("http://peel.library.ualberta.ca/pcimages/PC/007/web/PC007458.jpg");
+         var imagepath = filename;
+         var connection = url.openConnection();
+         connection.setRequestMethod("HEAD");
+         connection.connect();
+         
+         self.setSelected(connection.getResponseCode() == HttpURLConnection.HTTP_OK);
       </scriptselector>
     </selector>
 
@@ -279,33 +279,59 @@
         <!-- load the existing fileset from fileset-good for the tiffs that are validated by JHOVE and should have been uploaded at this point. 
          Uses a javascript selector to check each file with its corresponding URL. Delete the files when the url exists. 
          Generate reports of files that are validated and not validated  -->
-        <fileset dir="${dir.images.source}" includesfile="${dir.output}/fileset-good.txt"
-            id="tiffs.validated">
-            <selector refid="tiff.url.exists.selector"/>
+        <antcall target="jhove-parse" inheritall="yes"/>
+        <fileset dir="${dir.images.source}" includesfile="output/fileset-good.txt" id="tiffs.validated">
+            <selector refid="tiff.url.exists.selector"/> 
         </fileset>
-        <pathconvert pathsep="${line.separator}" property="list.tiffs.validated"
-            refid="tiffs.validated">
-            <mapper type="flatten"/>
+        <pathconvert pathsep="${line.separator}" property="list.tiffs.validated" refid="tiffs.validated">
+            
         </pathconvert>
-        <echo file="${dir.output}/fileset-validatedtiffs.xml" append="false"
-            >${list.tiffs.validated}</echo>
-
-        <delete>
-            <fileset refid="tiffs.validated"/>
-        </delete>
-
-        <fileset dir="${dir.images.source}" includesfile="${dir.output}/fileset-good.txt"
-            id="tiffs.not.validated">
-            <not>
-                <selector refid="tiff.url.exists.selector"/>
-            </not>
+        <echo file="output/fileset-validatedtiffs.xml" append="false">${list.tiffs.validated}</echo> 
+        <echo>delete fileset 
+            ${list.tiffs.validated}</echo>
+        <delete><fileset refid="tiffs.validated"/></delete>
+        
+        
+        <fileset dir="${dir.images.source}" includesfile="output/fileset-good.txt" id="tiffs.not.validated">
+            <exclude id="tiffs.validated"/>
         </fileset>
-        <pathconvert pathsep="${line.separator}" property="list.tiffs.not.validated"
-            refid="tiffs.not.validated">
-            <mapper type="flatten"/>
+        <pathconvert pathsep="${line.separator}" property="list.tiffs.not.validated" refid="tiffs.not.validated">
+            <mapper type="flatten" />
         </pathconvert>
-        <echo file="${dir.output}/fileset-notvalidatedtiffs.xml" append="true"
-            >${list.tiffs.notvalidated}</echo>
+        <echo file="output/fileset-notvalidatedtiffs.xml" append="true">${list.tiffs.notvalidated}</echo>     
+    </target>
+    
+    <!-- Convert Jhove Metadata to METS -->
+    <target name="jhove-premis">
+        <!--<mkdir dir="${dir.premis}"/>
+      <mkdir dir="${dir.premis}/temp"/>-->
+        
+        <foreach param="jhovemetadata" target="premis-copy">
+            
+            <path id="jhove.metadata.path">
+                <fileset dir="${dir.metadata}" includes="**/*.xml"/>
+            </path>
+            
+        </foreach>
+        
+        
+    </target>
+    
+    <target name="premis-copy">
+        <propertyregex property="filename" input="${jhovemetadata}" regexp="(.*)\${file.separator}(.*\.xml)" select="\2"/>
+        <copy file="template/premis-template.xml" tofile="${dir.premis}/${filename}" overwrite="yes"/>
+        <xmltask source="${dir.metadata}/${filename}">
+            <copy path="//*[local-name()='repInfo']/@uri" property="uri" attrValue="true"/>
+            <copy path="//*[local-name()='values'][contains(@type, 'NISOImageMetadata')]/*[local-name()='value']/*[local-name()='mix']" buffer="mix"/>
+        </xmltask>
+        
+        <xmltask source="${dir.premis}/${filename}" dest="${dir.premis}/${filename}">
+            <print path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]"/>
+            <insert path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]/*[local-name()='objectCharacteristics']/*[local-name()='objectCharacteristicsExtension']" buffer="mix"/>
+            
+        </xmltask>
+        
+        
     </target>
 
 
