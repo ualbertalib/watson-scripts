@@ -124,7 +124,11 @@
         <antcall target="bagit-create" inheritall="true">
             <param name="dir.bag" value="${dir.run}/bag"/>
         </antcall>
-        <tstamp>
+       <antcall target="scp-upload" inheritall="true">
+          <param name="dir.bag" value="${dir.run}/bag"/>
+          <param name="host.dir" value="${host.dir}/${dir.run}"/>
+       </antcall>
+       <tstamp>
             <format property="end.tstamp" pattern="yyyy-MM-dd'T'HH:mm:ss"/>
         </tstamp>
         <echo>End run: ${end.tstamp}</echo>
@@ -276,6 +280,7 @@
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
         <delete dir="${dir.bag}" includes="**/.DS_Store" defaultexcludes="no"/>
+       <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="mkdir -p ${host.dir}"/>
         <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}">
             <fileset dir="${dir.bag}" includes="**/*"/>
         </scp>
@@ -538,4 +543,25 @@
         <au:assertFilesMatch actual="${dir.output}/bag-create/manifest-md5.txt"
             expected="tests/bag-create/manifest-md5.txt"/>
     </target>
+   
+   <target name="test_scp-upload">
+      <antcall target="bagit-create" inheritall="yes">
+         <param name="dir.bag" value="${dir.output}/bag-create"/>
+         <param name="dir.images.source" value="tests/data"/>
+         <param name="dir.metadata" value="tests/data"/>
+      </antcall>
+      <antcall target="bagit-verify" inheritall="yes">
+         <param name="dir.bag" value="${dir.output}/bag-create"/>
+      </antcall>
+      <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="rm -rf ${host.dir}/test_scp-upload"/>
+      <antcall target="scp-upload" inheritall="yes">
+         <param name="host.dir" value="${host.dir}/test_scp-upload"/>
+      </antcall>
+      <au:expectfailure>
+         <antcall target="scp-upload" inheritall="yes">
+            <param name="host.password" value="nope"/>
+            <param name="host.dir" value="${host.dir}/test_scp-upload"/>
+         </antcall>
+      </au:expectfailure>
+   </target>
 </project>
