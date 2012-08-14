@@ -10,3 +10,5 @@ premis/
 *~
 
 bag_verified
+.DS_Store
+Thumbs.db
