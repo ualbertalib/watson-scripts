@@ -53,12 +53,16 @@
         <scriptselector language="javascript" xml:space="preserve">
          importClass(java.net.URL);
          importClass(java.net.HttpURLConnection);
-         var url = new URL ("http://peel.library.ualberta.ca/pcimages/PC/007/web/PC007458.jpg");
-         var imagepath = filename;
+         var imagepath = filename.replace("\\", "/");
+         var urlpath = "http://jacobus.library.ualberta.ca/~watson/" + filename.replace("\\", "/");
+         var url = new URL (urlpath);
          var connection = url.openConnection();
          connection.setRequestMethod("HEAD");
          connection.connect();
-         
+         <!-- echo task to output variables for debugging purposes -->
+         <!--echo = Watson.createTask("echo");
+         echo.setMessage(urlpath);
+         echo.perform();-->
          self.setSelected(connection.getResponseCode() == HttpURLConnection.HTTP_OK);
       </scriptselector>
     </selector>
@@ -281,39 +285,44 @@
          excluded from all directory-based tasks -->
         <delete dir="${dir.bag}" includes="**/.DS_Store" defaultexcludes="no"/>
        <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="mkdir -p ${host.dir}"/>
-        <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}">
+        <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true">
             <fileset dir="${dir.bag}" includes="**/*"/>
         </scp>
     </target>
 
-    <target name="final-tiff-validation">
+    <target name="final-tiff-validation" depends="metadata">
         <!-- load the existing fileset from fileset-good for the tiffs that are validated by JHOVE and should have been uploaded at this point. 
          Uses a javascript selector to check each file with its corresponding URL. Delete the files when the url exists. 
          Generate reports of files that are validated and not validated  -->
         <antcall target="jhove-parse" inheritall="yes"/>
-        <fileset dir="${dir.images.source}" includesfile="output/fileset-good.txt" id="tiffs.validated">
+        
+        <property name="inputfile" value="output/fileset-good.txt"/>
+        <fileset dir="${dir.images.source}" includesfile="${inputfile}" id="tiffs.validated">
             <selector refid="tiff.url.exists.selector"/> 
         </fileset>
         <pathconvert pathsep="${line.separator}" property="list.tiffs.validated" refid="tiffs.validated">
-            
+            <map from="${basedir}${file.separator}${dir.images.source}${file.separator}" to=""/>
         </pathconvert>
-        <echo file="output/fileset-validatedtiffs.xml" append="false">${list.tiffs.validated}</echo> 
+        <echo file="output/fileset-validatedtiffs.txt" append="false">${list.tiffs.validated}</echo> 
         <echo>delete fileset 
             ${list.tiffs.validated}</echo>
-        <delete><fileset refid="tiffs.validated"/></delete>
-        
-        
-        <fileset dir="${dir.images.source}" includesfile="output/fileset-good.txt" id="tiffs.not.validated">
-            <exclude id="tiffs.validated"/>
-        </fileset>
+        <antcall target="delete-tiff" inheritall="yes"/>
+        <fileset dir="${dir.images.source}" excludesfile="output/fileset-validatedtiffs.txt" includesfile="${inputfile}" id="tiffs.not.validated"/>
+            
         <pathconvert pathsep="${line.separator}" property="list.tiffs.not.validated" refid="tiffs.not.validated">
-            <mapper type="flatten" />
+            
         </pathconvert>
-        <echo file="output/fileset-notvalidatedtiffs.xml" append="true">${list.tiffs.notvalidated}</echo>     
+        <echo>issues with following files 
+            ${list.tiffs.not.validated}</echo>
+        <echo file="output/report-not-validated-tiff.txt" append="false">${list.tiffs.not.validated}</echo>     
+    </target>
+    
+    <target name="delete-tiff" unless="dry.run">
+        <delete><fileset refid="tiffs.validated"/></delete>
     </target>
     
     <!-- Convert Jhove Metadata to METS -->
-    <target name="jhove-premis">
+    <target name="jhove-premis" depends="metadata">
         <!--<mkdir dir="${dir.premis}"/>
       <mkdir dir="${dir.premis}/temp"/>-->
         
@@ -362,6 +371,8 @@
             <insert path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]/*[local-name()='objectCharacteristics']/*[local-name()='objectCharacteristicsExtension']" buffer="mix"/>
             <insert path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='MD5']/*[local-name()='messageDigest']" buffer="md5"/>
             <insert path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='SHA-1']/*[local-name()='messageDigest']" buffer="sha1"/>
+            <replace path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='MD5']/*[local-name()='messageDigestOriginator']/text()" withText="Jhove"  />
+            <replace path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='SHA-1']/*[local-name()='messageDigestOriginator']/text()" withText="Jhove"  />
             <insert path="//*[local-name()='size']" buffer="size"/>
             <insert path="//*[local-name()='object'][contains(@*[local-name()='type'], 'file')]/*[local-name()='objectCharacteristics']/*[local-name()='format']" if="set.tiff">
                 <![CDATA[ 
@@ -470,8 +481,8 @@
         <resourcecount property="count-good" refid="tiffs-good"/>
         <resourcecount property="count-bad" refid="tiffs-bad"/>
 
-        <au:assertPropertyEquals name="count-all" value="3"/>
-        <au:assertPropertyEquals name="count-good" value="1"/>
+        <au:assertPropertyEquals name="count-all" value="4"/>
+        <au:assertPropertyEquals name="count-good" value="2"/>
         <au:assertPropertyEquals name="count-bad" value="2"/>
 
         <!-- normalize line endings to unix, to match expected file -->
@@ -556,6 +567,7 @@
       <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="rm -rf ${host.dir}/test_scp-upload"/>
       <antcall target="scp-upload" inheritall="yes">
          <param name="host.dir" value="${host.dir}/test_scp-upload"/>
+          <param name="dir.bag" value="${dir.output}/bag-create"/>
       </antcall>
       <au:expectfailure>
          <antcall target="scp-upload" inheritall="yes">
@@ -564,4 +576,26 @@
          </antcall>
       </au:expectfailure>
    </target>
+    
+    <target name="test-final-validation-matching-url" depends="metadata, jhove-parse">
+         
+         <antcall target="final-tiff-validation" inheritall="yes">
+            <param name="dir.images.source" value="testdata"/>
+            <param name="dir.output" value="tests/output"/>
+            <param name="dry.run" value="true"/>
+        </antcall>
+        <condition property="good.url.status">
+            <http url="http://jacobus.library.ualberta.ca/~watson/box1/good.tiff"/>
+        </condition>
+        <condition property="no.url.status">
+            <not>
+                <http url="http://jacobus.library.ualberta.ca/~watson/box1/good-no-url.tiff"/>
+            </not>
+        </condition>
+        <au:assertPropertyEquals name="good.url.status" value="true"/>
+        <au:assertPropertyEquals name="no.url.status" value="true"/>
+        <au:assertFilesMatch actual="output/fileset-validatedtiffs.txt" expected="tests/validate-matchingurl/fileset-validatedtiffs.txt"/>
+        <au:assertFilesMatch actual="output/report-not-validated-tiff.txt" expected="tests/validate-matchingurl/report-not-validated-tiff.txt"/>
+       
+    </target>
 </project>
