@@ -126,7 +126,7 @@
 
         <!-- get xalan -->
         <mkdir dir="dependencies/xalan"/>
-        <get src="http://apache.sunsite.ualberta.ca/xml/xalan-j/${xalan}"
+       <get src="http://archive.apache.org/dist/xml/xalan-j/${xalan}"
             dest="dependencies/${xalan}" usetimestamp="true"/>
         <condition property="xalan-ok">
             <checksum file="dependencies/${xalan}" property="${xalan-md5}"/>
