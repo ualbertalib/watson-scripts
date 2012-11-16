@@ -10,7 +10,7 @@
     <property name="dir.bag" location="bag"/>
     <property name="dir.data" location="data"/>
     <property name="dir.output" location="output"/>
-
+    
     <!-- add the jars in the lib directory to the classpath -->
     <path id="main.classpath">
         <fileset dir="lib">
@@ -38,15 +38,7 @@
 
     <import file="build-import-utilities.xml"/>
 
-    <!-- sample script selector - could be extended to e.g. detect files that are present in one copy but not another -->
-    <selector id="has.www.selector">
-        <scriptselector language="javascript" xml:space="preserve">
-            if (file.isDirectory()) {
-               var marker = new java.io.File(file, "martini/www");
-               self.setSelected(marker.exists() &amp;&amp; marker.isDirectory());
-            }
-      </scriptselector>
-    </selector>
+  
 
     <!-- script selector - to select the images which has a web presentation -->
     <selector id="tiff.url.exists.selector">
@@ -66,60 +58,19 @@
          self.setSelected(connection.getResponseCode() == HttpURLConnection.HTTP_OK);
       </scriptselector>
     </selector>
-
-
-
-    <!-- basic copy target -->
-    <target name="newspapers-wcmets-copyhd" description="Copy wcmets materials from hd to SAN"
-        if="delivery">
-        <mkdir dir="${wcmetslocation}"/>
-        <copy todir="${wcmetslocation}">
-            <fileset dir="${wcmetshd}">
-                <include name="**/*.xml"/>
-                <include name="**/*.pdf"/>
-                <include name="**/*.jp2"/>
-            </fileset>
-        </copy>
-    </target>
-
-
-    <!-- sample target with logging and email notification -->
-    <target name="newspapers-wcmets-ingest"
-        description="Copy wcmets materials from hd to sam-fs cache" depends="init">
-        <!-- e.g. -Dwcmetshd=e:/UniversityOfAlberta -Dwcmetslocation=V:/peel_newspaper/west_canadian -->
-        <!-- note: depends on copy.properties file in each newspaper directory -->
-        <property name="dirset" value="*"/>
-        <property name="overwrite" value="false"/>
-        <defaultexcludes add="**/System Volume Information/**"/>
-        <defaultexcludes add="**/WD_Setup_Do_Not_Remove/**"/>
-        <defaultexcludes add="**/$RECYCLE.BIN/**"/>
-
-        <property name="targetname" value="newspapers-wcmets-ingest"/>
-        <property name="logname"
-            value="${logshome}/processing/${targetname}-${host}-${run.tstamp}.log"/>
-        <record name="${logname}" action="start" append="no"/>
-        <antcall target="run-start"/>
-
-
-        <subant inheritall="yes" genericantfile="build-subant-targets.xml"
-            target="newspapers-wcmets-ingest">
-            <dirset dir="${wcmetshd}" includes="${dirset}"/>
-        </subant>
-
-        <antcall target="run-end"/>
-        <antcall target="email-result" inheritall="true"/>
-    </target>
-
-
+  
     <!-- run -->
     <target name="run" description="Do a run" depends="init">
+        <echo>${basedir}</echo>
         <mkdir dir="${dir.data}"/>
+        <mkdir dir="${dir.logs}"/>
         <property name="dir.run" value="${dir.data}/run/${run.path}"/>
         <property name="log.run" value="${dir.logs}/${filename.tstamp}.log"/>
         <echo>Logging to ${log.run}</echo>
         <record action="start" name="${log.run}"/>
         <antcall target="metadata" inheritall="true">
             <param name="dir.metadata" value="${dir.run}/metadata"/>
+            <param name="dir.run" value="${dir.run}"/>
         </antcall>
         <antcall target="jhove-parse" inheritall="true">
             <param name="dir.metadata" value="${dir.run}/metadata"/>
@@ -127,6 +78,7 @@
         </antcall>
         <antcall target="bagit-create" inheritall="true">
             <param name="dir.bag" value="${dir.run}/bag"/>
+            <param name="dir.metadata" value="${dir.run}/metadata"/>
         </antcall>
        <antcall target="scp-upload" inheritall="true">
           <param name="dir.bag" value="${dir.run}/bag"/>
@@ -139,27 +91,44 @@
         <record action="stop" name="${log.run}"/>
         <echo>Run log: ${log.run}</echo>
     </target>
-
+    
+   
 
     <!-- JHOVE targets -->
     <!-- prepare image metadata, using JHove -->
     <target name="metadata" description="Create image metadata using jhove for this item">
         <mkdir dir="${dir.metadata}"/>
-        <foreach param="tiffile" target="jhove-single">
+       
+        <foreach param="tiffile" target="jhove-single" inheritall="true">
 
             <path id="tif.path">
-                <fileset dir="${dir.images.source}" includes="**/*.tif **/*.TIF **/*.tiff **/*.TIFF"
+                <fileset dir="${dir.images.source}" includes="**/*.tif **/*.TIF **/*.tiff **/*.TIFF" 
                 />
+               
+               
             </path>
         </foreach>
+        
     </target>
     <!-- utility task for metadata: this allows us to do an uptodate check, so the metadata won't be recreated if the TIFF hasn't changed -->
     <target name="jhove-single">
-        <propertyregex property="filename" input="${tiffile}"
-            regexp="${dir.images.source}\${file.separator}(.*)\.[tT][iI][fF][fF]?" select="\1"/>
-        <propertyregex property="dirname" input="${tiffile}"
-            regexp="${dir.images.source}\${file.separator}(.*)\${file.separator}.*\.[tT][iI][fF][fF]?"
+        <pathconvert dirsep="${file.separator}" property="tiff.relative.path">
+            <filelist dir="${dir.images.source}">
+                <file name="${tiffile}"/>
+            </filelist>
+            <map from="${dir.images.source}${file.separator}" to=""/>
+        </pathconvert>
+        <echo>${basedir}</echo>
+        <echo>${dir.images.source}</echo>
+        <echo>${tiffile}</echo>
+        <echo>${tiff.relative.path}</echo>
+        <propertyregex property="dirname" input="${tiff.relative.path}"
+            regexp="(.*)\${file.separator}.*\.[tT][iI][fF][fF]?"
             select="\1"/>
+        <echo>dirname: ${dirname}</echo>
+        <propertyregex property="filename" input="${tiff.relative.path}"
+            regexp="(.*)\.[tT][iI][fF][fF]?" select="\1"/>
+        <echo>filename: ${filename}</echo>
         <mkdir dir="${dir.metadata}/${dirname}"/>
         <uptodate property="jhove.uptodate" srcfile="${tiffile}"
             targetfile="${dir.metadata}${file.separator}${filename}.xml"/>
@@ -184,9 +153,12 @@
     <target name="jhove-parse">
         <mkdir dir="${dir.output}"/>
         <!-- note: the xquery will produce paths using the unix file separator "/", even on Windows -->
+        <echo>${dir.metadata}</echo>
+        <echo>${basedir}</echo>
         <java classpathref="main.classpath" classname="net.sf.saxon.Query">
             <arg value="-q:xquery/gather.xquery"/>
             <arg value="-o:${dir.output}/jhove-parse.xml"/>
+            <arg value="dir=${dir.metadata}"/>
         </java>
         <!-- get absolute path of source directory -->
         <property name="absolute.path.source" location="${dir.images.source}"/>
@@ -226,6 +198,8 @@
         <property name="bag.command" value="create"/>
         <property name="bag.params" value="${dir.bag} ${dir.images.source}/*"/>
         <echo>${bag.params}</echo>
+        <echo>${dir.metadata}</echo>
+       
         <!-- remove evil .DS_Store and Thumbs.db files -->
         <delete dir="${dir.images.source}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
         <delete dir="${dir.metadata}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
@@ -246,7 +220,7 @@
             <arg value="--log-verbose"/>
             <arg value="--verbose"/>
         </java>
-
+        
     </target>
 
     <target name="bagit-verify">
