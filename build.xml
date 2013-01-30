@@ -82,7 +82,7 @@
         </antcall>
        <antcall target="scp-upload" inheritall="true">
           <param name="dir.bag" value="${dir.run}/bag"/>
-          <param name="host.dir" value="${host.dir}/${dir.run}"/>
+          <param name="host.dir" value="${host.dir}/run/${run.path}"/>
        </antcall>
        <tstamp>
             <format property="end.tstamp" pattern="yyyy-MM-dd'T'HH:mm:ss"/>
