@@ -60,7 +60,16 @@
          self.setSelected(connection.getResponseCode() == HttpURLConnection.HTTP_OK);
       </scriptselector>
     </selector>
+   
+   <!-- TODO 2013-05-29 run rename-with-box target: to rename TIFFs to include box number, from directory name
+         - drop flag file "boxnameadded" in folder when done -->
+   
   
+   <!-- TODO 2013-05-29 make it run at folder level rather than at top level:
+      change "run" task to "run-folder" - create new "run" task that calls
+      run-folder in every folder - drop flag file "finished" in 
+      folder to mark status (do not run again on "finished" folders -->
+   
     <!-- run -->
     <target name="run" description="Do a run" depends="init">
         <echo>${basedir}</echo>
@@ -70,6 +79,7 @@
         <property name="log.run" value="${dir.logs}/${filename.tstamp}.log"/>
         <echo>Logging to ${log.run}</echo>
         <record action="start" name="${log.run}"/>
+       <!-- TODO 2013-05-29 register folder with "starting bag" call to logging server -->
         <antcall target="metadata" inheritall="true">
             <param name="dir.metadata" value="${dir.run}/metadata"/>
             <param name="dir.run" value="${dir.run}"/>
@@ -124,6 +134,7 @@
         <echo>${dir.images.source}</echo>
         <echo>${tiffile}</echo>
         <echo>${tiff.relative.path}</echo>
+       <!-- TODO 2013-05-29 hit a url on the logging server to register this file -->
         <propertyregex property="dirname" input="${tiff.relative.path}"
             regexp="(.*)\${file.separator}.*\.[tT][iI][fF][fF]?"
             select="\1"/>
@@ -275,14 +286,15 @@
     <!-- scp target -->
 
     <target name="scp-upload">
-        <!-- remove .DS_Store files, in case you've inspected the bag in Finder; 
+        <!-- remove .DS_Store and Thumbs.db files, in case you've inspected the bag in Finder or Windows Explorer; 
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
-       <delete dir="${dir.bag}" includes="**/.DS_Store" defaultexcludes="no"/>
+       <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
        <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="mkdir -p ${host.dir}"/>
         <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true">
             <fileset dir="${dir.bag}" includes="**/*"/>
         </scp>
+       <!-- TODO 2013-05-29 delete bag once successfully uploaded, to save space on drive -->
         <move todir="${dir.completed}">
             <fileset dir="${dir.bag}" includes="**/*"></fileset>
         </move>
