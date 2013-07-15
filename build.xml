@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit"
     xmlns:jhove="http://hul.harvard.edu/ois/xml/ns/jhove">
+    
+    
     <property file="build.properties"/>
 
     <!-- default values, which are overridden by settings in build.properties -->
@@ -182,9 +184,28 @@
             <param name="basedir-raw" expression="${absolute.path.source}"/>
             <param name="output" expression="${dir.output}"/>
         </xslt>
+        <available file="${dir.output}/report-bad-tiff.txt" property="bad.tiff.exists"/>
+        <antcall target="move-bad-files"/>
     </target>
 
-
+    <target name="move-bad-files" if="bad.tiff.exists">
+        <mkdir dir="${dir.images.source}/bad-files"/>
+        <loadfile property="bad.files" srcfile="${dir.output}/report-bad-tiff.txt">
+            <filterchain>
+                <linecontains>
+                    <contains value="Bad file: "/>
+                </linecontains>
+            </filterchain>
+        </loadfile>
+        <foreach list="${bad.files}" delimiter="&#x0a;" target="move-bad-files-do-it" param="fileline" inheritall="true"/>
+        
+    </target>
+    
+    <target name="move-bad-files-do-it">
+        <echo>${fileline}</echo>
+        <propertyregex property="file" input="${fileline}" regexp="Bad file: (.*\.[tT][iI][fF][fF]?)" select="\1" />
+        <move file="${dir.images.source}${file.separator}${file}" todir="${dir.images.source}${file.separator}bad-files"/>
+    </target>
     <!-- bagit targets: directory level -->
 
     <target name="bagit-create">
@@ -257,11 +278,14 @@
         <!-- remove .DS_Store files, in case you've inspected the bag in Finder; 
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
-        <delete dir="${dir.bag}" includes="**/.DS_Store" defaultexcludes="no"/>
+       <delete dir="${dir.bag}" includes="**/.DS_Store" defaultexcludes="no"/>
        <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="mkdir -p ${host.dir}"/>
         <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true">
             <fileset dir="${dir.bag}" includes="**/*"/>
         </scp>
+        <move todir="${dir.completed}">
+            <fileset dir="${dir.bag}" includes="**/*"></fileset>
+        </move>
     </target>
 
     <target name="final-tiff-validation" depends="metadata">
@@ -394,6 +418,7 @@
     <target name="setUp">
         <!-- preparation: delete jhove output files from previous run -->
         <echo>Set Up</echo>
+        <property file="test.properties"/>
         <mkdir dir="${dir.output}"/>
         <mkdir dir="${dir.metadata}"/>
         <delete>
@@ -404,6 +429,7 @@
     </target>
 
     <target name="antunit" xmlns:au="antlib:org.apache.ant.antunit">
+       
         <au:antunit>
             <fileset file="${ant.file}"/>
             <au:plainlistener/>
