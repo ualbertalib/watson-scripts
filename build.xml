@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit"
+todo<project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit"
     xmlns:jhove="http://hul.harvard.edu/ois/xml/ns/jhove">
     
     
@@ -40,7 +40,10 @@
 
     <import file="build-import-utilities.xml"/>
 
-  
+   <tstamp>
+      <format property="today.tstamp" pattern="yyyy-MM-dd"/>
+   </tstamp>
+   
 
     <!-- script selector - to select the images which has a web presentation -->
     <selector id="tiff.url.exists.selector">
@@ -100,7 +103,7 @@
       <echo>Logging to ${log.run}</echo>
       <record action="start" name="${log.run}"/>
       
-      <foreach param="dir.folder" target="run-folder">
+      <foreach param="dir.folder" target="check-folder">
          <path>
             <dirset dir="${dir.run}" >
                <selector refid="folder.selector"/>
@@ -119,9 +122,48 @@
       <echo>Run log: ${log.run}</echo>
    </target>
    
-   <target name="run-folder" description="Do a run on an individual folder" depends="init">
-      <!-- called by target "run" -->
-      <!-- TODO 2013-05-29 register folder with "starting bag" call to logging server -->
+   <target name="check-folder" description="Check status of folder on server" depends="init">
+      <!--
+      4) At the beginning of processing a bag, notify the HUCO server that you are beginning a bag:
+      
+      http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no value for bags]&path=/full/file/path/excluding/file/name&action=bag-get
+      
+      this should return false if the bag doesn't exist (Harvey will parse the bag id from the path). 
+      If it returns NOT false, it will provide the current bag state (and a timestamp). In future, we 
+      might add behaviour here based on the state, but for the moment, you can probably quit if it 
+      returns a status. -->
+      
+      <!-- get full path of current folder -->
+      <urlencode name="folderpath" location="."/>
+      <!-- fetch bag state into property bag.state -->
+      <loadresource property="bag.state">
+         <url url="${api.uri}?filename=&amp;path=${folderpath}&amp;action=bag-get"/>
+      </loadresource>
+      
+      <!-- if bag does not exist on server, bag.state is false -->
+      <condition property="do.bag">
+         <equals arg1="${bag.state}" arg2="false"/>
+      </condition>
+      <antcall target="run-folder" inheritall="true"/>
+   </target>
+   
+   <target name="run-folder" description="Do a run on an individual folder" depends="init" if="do.bag">
+      <!-- called by target "check-folder" -->
+      <!-- TODO DONE 2013-05-29 register folder with "starting bag" call to logging server
+      
+      after you've got a "false", set the state like this:
+
+http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no value for bags]&path=/full/file/path/excluding/file/name&action=bag-start
+      
+      -->
+      <!-- get full path of current folder -->
+      <property name="folderpath" location="."/>
+      
+      <post to="${api.uri}" verbose="true">
+         <prop name="filename" value=""/>
+         <prop name="path" value="${folderpath}"/>
+         <prop name="action" value="bag-start"/>
+      </post>
 
      <antcall target="rename" inheritall="true"/>
       <antcall target="metadata" inheritall="true">
@@ -140,6 +182,13 @@
          <param name="dir.bag" value="${dir.folder}/bag"/>
          <param name="host.dir" value="${host.dir}/${dir.folder}"/>
       </antcall>
+      
+      <post to="${api.uri}" verbose="true">
+         <prop name="filename" value=""/>
+         <prop name="path" value="${folderpath}"/>
+         <prop name="action" value="bag-end"/>
+      </post>
+      
       <touch file="${dir.folder}/finished"/>
    </target>
     
@@ -151,16 +200,27 @@
          
          -->
       <!-- param dir.folder inherited -->
-      <propertyregex property="box" input="${dir.folder}" regexp=".*\-([0-9]*)\-[0-9]*$"
-         select="\1"/>
+      <post to="${api.uri}" verbose="true">
+         <prop name="filename" value=""/>
+         <prop name="path" value="${dir.folder}"/>
+         <prop name="action" value="UAL-boxnameadd-start"/>
+      </post>
+      
+      <propertyregex property="box" input="${dir.folder}" regexp=".*\-([0-9]*)\-[0-9]*$" select="\1"/>
       <move todir=".">
          <fileset dir=".">
             <include name="*"/>
          </fileset>
          <regexpmapper from="^([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$" to="\1\-\2\-${box}\-\3\-\4\.\5"/>
       </move>
-      
+
       <touch file="boxnameadded"/>
+      <post to="${api.uri}" verbose="true">
+         <prop name="filename" value=""/>
+         <prop name="path" value="${dir.folder}"/>
+         <prop name="action" value="UAL-boxnameadd-end"/>
+      </post>
+      
    </target>
 
     <!-- JHOVE targets -->
@@ -179,6 +239,7 @@
         </foreach>
         
     </target>
+   
     <!-- utility task for metadata: this allows us to do an uptodate check, so the metadata won't be recreated if the TIFF hasn't changed -->
     <target name="jhove-single">
         <pathconvert dirsep="${file.separator}" property="tiff.relative.path">
@@ -191,7 +252,7 @@
         <echo>${dir.images.source}</echo>
         <echo>${tiffile}</echo>
         <echo>${tiff.relative.path}</echo>
-       <!-- TODO 2013-05-29 hit a url on the logging server to register this file -->
+       
         <propertyregex property="dirname" input="${tiff.relative.path}"
             regexp="(.*)\${file.separator}.*\.[tT][iI][fF][fF]?"
             select="\1"/>
@@ -204,9 +265,17 @@
             targetfile="${dir.metadata}${file.separator}${filename}.xml"/>
         <antcall target="jhove-single-do-it" inheritall="true"/>
     </target>
-    <!-- utility task for metadata: create the metadata unless we are already uptodate -->
+
+   <!-- utility task for metadata: create the metadata unless we are already uptodate -->
     <target name="jhove-single-do-it" unless="jhove.uptodate">
-        <java jar="lib/jhoveapp.jar" fork="true">
+       <!-- TODO DONE 2013-05-29 hit a url on the logging server to register this file -->
+       <!--       http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=91-112-3-24.tif&path=/full/file/path/excluding/file/name&action=UAL-jhove-start -->
+       <post to="${api.uri}" verbose="true">
+          <prop name="filename" value="${tiffile}"/>
+          <prop name="path" value="${folderpath}"/>
+          <prop name="action" value="UAL-jhove-start"/>
+       </post>
+       <java jar="lib/jhoveapp.jar" fork="true">
             <arg value="-c"/>
             <arg value="lib/jhove.conf"/>
             <arg value="-o"/>
@@ -219,6 +288,11 @@
             <arg value="-k"/>
             <arg value="${tiffile}"/>
         </java>
+       <post to="${api.uri}" verbose="true">
+          <prop name="filename" value="${tiffile}"/>
+          <prop name="path" value="${folderpath}"/>
+          <prop name="action" value="UAL-jhove-end"/>
+       </post>
     </target>
     <target name="jhove-parse">
         <mkdir dir="${dir.output}"/>
@@ -273,11 +347,22 @@
         <echo>${fileline}</echo>
         <propertyregex property="file" input="${fileline}" regexp="Bad file: (.*\.[tT][iI][fF][fF]?)" select="\1" />
         <move file="${dir.images.source}${file.separator}${file}" todir="${dir.images.source}${file.separator}bad-files"/>
+       <post to="${api.uri}" verbose="true">
+          <prop name="filename" value="${file}"/>
+          <prop name="path" value="${dir.images.source}"/>
+          <prop name="action" value="UAL-badtiff"/>
+       </post>
+       
     </target>
     <!-- bagit targets: directory level -->
 
     <target name="bagit-create">
-
+       <post to="${api.uri}" verbose="true">
+          <prop name="filename" value=""/>
+          <prop name="path" value="${dir.images.source}"/>
+          <prop name="action" value="UAL-createbag-start"/>
+       </post>
+       
         <mkdir dir="${dir.logs}"/>
         <delete dir="${dir.bag}"/>
         <mkdir dir="${dir.bag}"/>
@@ -309,10 +394,21 @@
             <arg value="--log-verbose"/>
             <arg value="--verbose"/>
         </java>
-        
+       <post to="${api.uri}" verbose="true">
+          <prop name="filename" value=""/>
+          <prop name="path" value="${dir.images.source}"/>
+          <prop name="action" value="UAL-createbag-end"/>
+       </post>
+       
     </target>
 
     <target name="bagit-verify">
+       <post to="${api.uri}" verbose="true">
+          <prop name="filename" value=""/>
+          <prop name="path" value="${dir.bag}"/>
+          <prop name="action" value="UAL-verifybag-start"/>
+       </post>
+       
         <mkdir dir="${dir.logs}"/>
         <property name="logfile" value="${dir.logs}/bagit-verify.log"/>
         <echo>Logfile: ${logfile}</echo>
@@ -337,24 +433,43 @@
       <replace file="${logfile}" token=" File data/" value="&#x0a;File data/"/>
       <replace file="${logfile}" token=" Bag has file" value="&#x0a;Bag has file"/>
       <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>-->
+       <post to="${api.uri}" verbose="true">
+          <prop name="filename" value=""/>
+          <prop name="path" value="${dir.bag}"/>
+          <prop name="action" value="UAL-verifybag-end"/>
+       </post>
     </target>
 
 
     <!-- scp target -->
 
     <target name="scp-upload">
+       <post to="${api.uri}" verbose="true">
+          <prop name="filename" value=""/>
+          <prop name="path" value="${dir.bag}"/>
+          <prop name="action" value="UAL-uploadbag-start"/>
+       </post>
+       
         <!-- remove .DS_Store and Thumbs.db files, in case you've inspected the bag in Finder or Windows Explorer; 
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
        <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
+       <tar basedir="${dir.bag}" destfile="bag-${today.tstamp}" compression="gzip" includes="**/*"/>
+       
        <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="mkdir -p ${host.dir}"/>
         <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true">
-            <fileset dir="${dir.bag}" includes="**/*"/>
+           <fileset dir="${dir.bag}" includes="bag-${today.tstamp}"/>
         </scp>
        <!-- TODO 2013-05-29 delete bag once successfully uploaded, to save space on drive -->
         <move todir="${dir.completed}">
             <fileset dir="${dir.bag}" includes="**/*"></fileset>
         </move>
+       <post to="${api.uri}" verbose="true">
+          <prop name="filename" value=""/>
+          <prop name="path" value="${dir.bag}"/>
+          <prop name="action" value="UAL-uploadbag-end"/>
+       </post>
+       
     </target>
 
     <target name="final-tiff-validation" depends="metadata">
