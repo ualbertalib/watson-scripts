@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-todo<project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit"
+<project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit"
     xmlns:jhove="http://hul.harvard.edu/ois/xml/ns/jhove">
     
     
@@ -457,13 +457,18 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
        <tar basedir="${dir.bag}" destfile="bag-${today.tstamp}" compression="gzip" includes="**/*"/>
        
        <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="mkdir -p ${host.dir}"/>
-        <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true">
-           <fileset dir="${dir.bag}" includes="bag-${today.tstamp}"/>
+        <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true" failonerror="true">
+           <fileset dir="." includes="bag-${today.tstamp}"/>
         </scp>
-       <!-- TODO 2013-05-29 delete bag once successfully uploaded, to save space on drive -->
+       <!-- TODO DONE 2013-05-29 delete bag once successfully uploaded, to save space on drive -->
+       <!--
         <move todir="${dir.completed}">
             <fileset dir="${dir.bag}" includes="**/*"></fileset>
         </move>
+        -->
+       <delete dir="${dir.bag}"/>
+       <delete file="bag-${today.tstamp}"/>
+       
        <post to="${api.uri}" verbose="true">
           <prop name="filename" value=""/>
           <prop name="path" value="${dir.bag}"/>
