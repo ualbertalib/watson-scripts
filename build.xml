@@ -99,6 +99,7 @@
       <mkdir dir="${dir.data}"/>
       <mkdir dir="${dir.logs}"/>
       <property name="dir.run" value="${dir.data}/run/${run.path}"/>
+      <mkdir dir="${dir.run}"/>
       <property name="log.run" value="${dir.logs}/${filename.tstamp}.log"/>
       <echo>Logging to ${log.run}</echo>
       <record action="start" name="${log.run}"/>
