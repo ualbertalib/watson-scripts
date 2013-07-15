@@ -67,7 +67,7 @@
    <!-- select Watson folders, with names in this form: year-accession#-box#-folder# -->
    <selector id="folder.selector">
       <scriptselector language="javascript" xml:space="preserve"> 
-         self.setSelected(filename.match(/\${file.separator}[0-9]{2}\-[0-9]*\-[0-9]*\-[0-9]*$/) != null); 
+         self.setSelected(filename.match([0-9]{2}\-[0-9]*\-[0-9]*\-[0-9]*$/) != null); 
       </scriptselector>
    </selector>
    
@@ -107,7 +107,7 @@
       <foreach param="dir.folder" target="check-folder">
          <path>
             <dirset dir="${dir.run}" >
-               <selector refid="folder.selector"/>
+               <!--<selector refid="folder.selector"/>-->
                <not>
                   <selector refid="folder.finished.selector"/>
                </not>
@@ -135,15 +135,18 @@
       returns a status. -->
       
       <!-- get full path of current folder -->
-      <urlencode name="folderpath" location="."/>
+      <urlencode name="folderpath" location="${dir.folder}"/>
       <!-- fetch bag state into property bag.state -->
+	  <property name="url" value="filename=&amp;path=${dir.folder}/data&amp;action=bag-get"/>
       <loadresource property="bag.state">
-         <url url="${api.uri}?filename=&amp;path=${folderpath}&amp;action=bag-get"/>
+         <url url="${api.uri}?${url}"/>
       </loadresource>
-      
+      <echo>${url} -> ${bag.state}"</echo>
       <!-- if bag does not exist on server, bag.state is false -->
       <condition property="do.bag">
+	  <not>
          <equals arg1="${bag.state}" arg2="false"/>
+		 </not>
       </condition>
       <antcall target="run-folder" inheritall="true"/>
    </target>
@@ -445,6 +448,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
     <!-- scp target -->
 
     <target name="scp-upload">
+       <!-- TODO truncate path to start with folder; send bag file in filename -->
        <post to="${api.uri}" verbose="true">
           <prop name="filename" value=""/>
           <prop name="path" value="${dir.bag}"/>
@@ -455,8 +459,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
        <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
-       <tar basedir="${dir.bag}" destfile="bag-${today.tstamp}" compression="gzip" includes="**/*"/>
-       
+       <tar basedir="${dir.bag}" destfile="bag-${today.tstamp}.tar.gz" compression="gzip" includes="**/*"/>
        <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="mkdir -p ${host.dir}"/>
         <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true" failonerror="true">
            <fileset dir="." includes="bag-${today.tstamp}"/>
