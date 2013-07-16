@@ -93,7 +93,7 @@
       <echo>${basedir}</echo>
       <mkdir dir="${dir.data}"/>
       <mkdir dir="${dir.logs}"/>
-      <property name="dir.run" value="${dir.data}/run/${run.path}"/>
+      <property name="dir.run" value="${dir.data}/run/${today.tstamp}"/>
       <mkdir dir="${dir.run}"/>
       <property name="log.run" value="${dir.logs}/${filename.tstamp}.log"/>
       <echo>Logging to ${log.run}</echo>
@@ -101,7 +101,7 @@
 
       <foreach param="dir.folder" target="check-folder">
          <path>
-            <dirset dir="${dir.run}">
+            <dirset dir="${dir.source}">
                <!--<selector refid="folder.selector"/>-->
                <not>
                   <selector refid="folder.finished.selector"/>
@@ -134,16 +134,14 @@
       <!-- get Watson folder name e.g. 73-191-1-234 -->
       <basename property="foldername" file="${dir.folder}"/>
       <!-- fetch bag state into property bag.state -->
-      <property name="url" value="filename=&amp;path=${foldename}&amp;action=UAL-bag-getstatus"/>
+      <property name="url" value="filename=&amp;path=${foldername}&amp;action=UAL-bag-getstatus"/>
       <loadresource property="bag.state">
          <url url="${api.uri}?${url}"/>
       </loadresource>
       <echo>${url} -> ${bag.state}"</echo>
       <!-- if bag does not exist on server, bag.state is false -->
       <condition property="do.bag">
-         <not>
-            <equals arg1="${bag.state}" arg2="false"/>
-         </not>
+         <equals arg1="${bag.state}" arg2="false"/>
       </condition>
       <antcall target="run-folder" inheritall="true"/>
    </target>
@@ -232,7 +230,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <foreach param="tiffile" target="jhove-single" inheritall="true">
 
          <path id="tif.path">
-            <fileset dir="${dir.images.source}" includes="**/*.tif **/*.TIF **/*.tiff **/*.TIFF"/>
+            <fileset dir="${dir.source}" includes="**/*.tif **/*.TIF **/*.tiff **/*.TIFF"/>
 
 
          </path>
@@ -243,15 +241,14 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
    <!-- utility task for metadata: this allows us to do an uptodate check, so the metadata won't be recreated if the TIFF hasn't changed -->
    <target name="jhove-single">
       <pathconvert dirsep="${file.separator}" property="tiff.relative.path">
-         <filelist dir="${dir.images.source}">
+         <filelist dir="${dir.source}">
             <file name="${tiffile}"/>
          </filelist>
-         <map from="${dir.images.source}${file.separator}" to=""/>
+         <map from="${dir.source}${file.separator}" to=""/>
       </pathconvert>
-      <echo>${basedir}</echo>
-      <echo>${dir.images.source}</echo>
-      <echo>${tiffile}</echo>
-      <echo>${tiff.relative.path}</echo>
+      <echo>${dir.source}</echo>
+      <echo>tiffile: ${tiffile}</echo>
+      <echo>tiff.relative.path: ${tiff.relative.path}</echo>
 
       <propertyregex property="dirname" input="${tiff.relative.path}" regexp="(.*)\${file.separator}.*\.[tT][iI][fF][fF]?" select="\1"/>
       <echo>dirname: ${dirname}</echo>
@@ -266,8 +263,9 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
    <target name="jhove-single-do-it" unless="jhove.uptodate">
       <!-- TODO DONE 2013-05-29 hit a url on the logging server to register this file -->
       <!--       http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=91-112-3-24.tif&path=/full/file/path/excluding/file/name&action=UAL-jhove-start -->
+	<basename file="${tiffile}" property="filename"/>
       <antcall target="post">
-         <param name="filename" value="${tiffile}"/>
+         <param name="filename" value="${filename}"/>
          <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-jhove-start"/>
       </antcall>
@@ -285,7 +283,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
          <arg value="${tiffile}"/>
       </java>
       <antcall target="post">
-         <param name="filename" value="${tiffile}"/>
+         <param name="filename" value="${filename}"/>
          <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-jhove-end"/>
       </antcall>
@@ -301,7 +299,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
          <arg value="dir=${dir.metadata}"/>
       </java>
       <!-- get absolute path of source directory -->
-      <property name="absolute.path.source" location="${dir.images.source}"/>
+      <property name="absolute.path.source" location="${dir.folder}"/>
       <echo>absolute.path.source: ${absolute.path.source}</echo>
       <!-- TODO make sure the path handling works on Windows: may need to use ${file.separator} instead of / in xsl -->
       <xslt in="${dir.output}/jhove-parse.xml" out="${dir.output}/fileset-all.txt" style="xsl/make-filesets.xsl">
@@ -324,7 +322,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
    </target>
 
    <target name="move-bad-files" if="bad.tiff.exists">
-      <mkdir dir="${dir.images.source}/bad-files"/>
+      <mkdir dir="${dir.folder}/bad-files"/>
       <loadfile property="bad.files" srcfile="${dir.output}/report-bad-tiff.txt">
          <filterchain>
             <linecontains>
@@ -339,7 +337,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
    <target name="move-bad-files-do-it">
       <echo>${fileline}</echo>
       <propertyregex property="file" input="${fileline}" regexp="Bad file: (.*\.[tT][iI][fF][fF]?)" select="\1"/>
-      <move file="${dir.images.source}${file.separator}${file}" todir="${dir.images.source}${file.separator}bad-files"/>
+      <move file="${dir.folder}${file.separator}${file}" todir="${dir.folder}${file.separator}bad-files"/>
       <antcall target="post">
          <param name="filename" value="${file}"/>
          <param name="path" value="${foldername}"/>
@@ -363,12 +361,12 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <property name="logfile" value="${dir.logs}/bagit-create.log"/>
 
       <property name="bag.command" value="create"/>
-      <property name="bag.params" value="${dir.bag} ${dir.images.source}/*"/>
-      <echo>${bag.params}</echo>
-      <echo>${dir.metadata}</echo>
+      <property name="bag.params" value="${dir.bag} ${dir.folder}/*"/>
+      <echo>bag params: ${bag.params}</echo>
+      <echo>dir.metadata: ${dir.metadata}</echo>
 
       <!-- remove evil .DS_Store and Thumbs.db files -->
-      <delete dir="${dir.images.source}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
+      <delete dir="${dir.folder}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
       <delete dir="${dir.metadata}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
 
       <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
@@ -381,7 +379,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
          <!--<jvmarg value="-Dlog_file=${logshome}/processing/bagit-${dirname}.log"/>-->
          <arg value="${bag.command}"/>
          <arg value="${dir.bag}"/>
-         <arg value="${dir.images.source}/*"/>
+         <arg value="${dir.folder}/*"/>
          <arg value="${dir.metadata}/*"/>
 
          <arg value="--log-verbose"/>
@@ -437,8 +435,9 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
    <target name="scp-upload">
       <!-- TODO truncate path to start with folder; send bag file in filename -->
+	<property name="bagname" value="bag-${today.tstamp}.tar.gz"/>
       <antcall target="post">
-         <param name="filename" value=""/>
+         <param name="filename" value="${bagname}"/>
          <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-uploadbag-start"/>
       </antcall>
@@ -447,10 +446,10 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
       <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
-      <tar basedir="${dir.bag}" destfile="bag-${today.tstamp}.tar.gz" compression="gzip" includes="**/*"/>
+      <tar basedir="${dir.bag}" destfile="${bagname}" compression="gzip" includes="**/*"/>
       <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="mkdir -p ${host.dir}"/>
       <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true" failonerror="true">
-         <fileset dir="." includes="bag-${today.tstamp}"/>
+         <fileset dir="." includes="${bagname}"/>
       </scp>
       <!-- TODO DONE 2013-05-29 delete bag once successfully uploaded, to save space on drive -->
       <!--
@@ -459,10 +458,10 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         </move>
         -->
       <delete dir="${dir.bag}"/>
-      <delete file="bag-${today.tstamp}"/>
+      <delete file="${bagname}"/>
 
       <antcall target="post">
-         <param name="filename" value=""/>
+         <param name="filename" value="${bagname}"/>
          <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-uploadbag-end"/>
       </antcall>
@@ -476,16 +475,16 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <antcall target="jhove-parse" inheritall="yes"/>
 
       <property name="inputfile" value="output/fileset-good.txt"/>
-      <fileset dir="${dir.images.source}" includesfile="${inputfile}" id="tiffs.validated">
+      <fileset dir="${dir.folder}" includesfile="${inputfile}" id="tiffs.validated">
          <selector refid="tiff.url.exists.selector"/>
       </fileset>
       <pathconvert pathsep="${line.separator}" property="list.tiffs.validated" refid="tiffs.validated">
-         <map from="${basedir}${file.separator}${dir.images.source}${file.separator}" to=""/>
+         <map from="${basedir}${file.separator}${dir.folder}${file.separator}" to=""/>
       </pathconvert>
       <echo file="output/fileset-validatedtiffs.txt" append="false">${list.tiffs.validated}</echo>
       <echo>delete fileset ${list.tiffs.validated}</echo>
       <antcall target="delete-tiff" inheritall="yes"/>
-      <fileset dir="${dir.images.source}" excludesfile="output/fileset-validatedtiffs.txt" includesfile="${inputfile}" id="tiffs.not.validated"/>
+      <fileset dir="${dir.folder}" excludesfile="output/fileset-validatedtiffs.txt" includesfile="${inputfile}" id="tiffs.not.validated"/>
 
       <pathconvert pathsep="${line.separator}" property="list.tiffs.not.validated" refid="tiffs.not.validated"> </pathconvert>
       <echo>issues with following files ${list.tiffs.not.validated}</echo>
@@ -634,7 +633,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
    <!-- test properties -->
    <target name="test_properties">
-      <au:assertPropertySet name="dir.images.source"/>
+      <au:assertPropertySet name="dir.folder"/>
       <au:assertPropertySet name="dir.metadata"/>
       <au:assertPropertySet name="dir.logs"/>
       <au:assertPropertySet name="dir.bag"/>
@@ -664,9 +663,9 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
    </target>
 
    <target name="test_jhove-parse" depends="metadata,jhove-parse">
-      <fileset dir="${dir.images.source}" includesfile="${dir.output}/fileset-all.txt" id="tiffs-all"/>
-      <fileset dir="${dir.images.source}" includesfile="${dir.output}/fileset-good.txt" id="tiffs-good"/>
-      <fileset dir="${dir.images.source}" includesfile="${dir.output}/fileset-bad.txt" id="tiffs-bad"/>
+      <fileset dir="${dir.folder}" includesfile="${dir.output}/fileset-all.txt" id="tiffs-all"/>
+      <fileset dir="${dir.folder}" includesfile="${dir.output}/fileset-good.txt" id="tiffs-good"/>
+      <fileset dir="${dir.folder}" includesfile="${dir.output}/fileset-bad.txt" id="tiffs-bad"/>
 
       <resourcecount property="count-all" refid="tiffs-all"/>
       <resourcecount property="count-good" refid="tiffs-good"/>
@@ -731,7 +730,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
    <target name="test_bagit-create">
       <antcall target="bagit-create" inheritall="yes">
          <param name="dir.bag" value="${dir.output}/bag-create"/>
-         <param name="dir.images.source" value="tests/data"/>
+         <param name="dir.folder" value="tests/data"/>
          <param name="dir.metadata" value="tests/data"/>
       </antcall>
       <antcall target="bagit-verify" inheritall="yes">
@@ -743,7 +742,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
    <target name="test_scp-upload">
       <antcall target="bagit-create" inheritall="yes">
          <param name="dir.bag" value="${dir.output}/bag-create"/>
-         <param name="dir.images.source" value="tests/data"/>
+         <param name="dir.folder" value="tests/data"/>
          <param name="dir.metadata" value="tests/data"/>
       </antcall>
       <antcall target="bagit-verify" inheritall="yes">
@@ -765,7 +764,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
    <target name="test-final-validation-matching-url" depends="metadata, jhove-parse">
 
       <antcall target="final-tiff-validation" inheritall="yes">
-         <param name="dir.images.source" value="testdata"/>
+         <param name="dir.folder" value="testdata"/>
          <param name="dir.output" value="tests/output"/>
          <param name="dry.run" value="true"/>
       </antcall>
