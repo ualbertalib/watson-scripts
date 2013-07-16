@@ -131,8 +131,10 @@
 
       <!-- get full path of current folder -->
       <urlencode name="folderpath" location="${dir.folder}"/>
+      <!-- get Watson folder name e.g. 73-191-1-234 -->
+      <basename property="foldername" file="${dir.folder}"/>
       <!-- fetch bag state into property bag.state -->
-      <property name="url" value="filename=&amp;path=${dir.folder}/data&amp;action=bag-get"/>
+      <property name="url" value="filename=&amp;path=${foldename}&amp;action=UAL-bag-getstatus"/>
       <loadresource property="bag.state">
          <url url="${api.uri}?${url}"/>
       </loadresource>
@@ -157,10 +159,10 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       -->
       <!-- get full path of current folder -->
       <property name="folderpath" location="."/>
-
+      <!-- note: inherits foldername -->      
       <antcall target="post">
          <param name="filename" value=""/>
-         <param name="path" value="${folderpath}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="bag-start"/>
       </antcall>
 
@@ -184,7 +186,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
       <antcall target="post">
          <param name="filename" value=""/>
-         <param name="path" value="${folderpath}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="bag-end"/>
       </antcall>
 
@@ -201,7 +203,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <!-- param dir.folder inherited -->
       <antcall target="post">
          <param name="filename" value=""/>
-         <param name="path" value="${dir.folder}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-boxnameadd-start"/>
       </antcall>
 
@@ -216,7 +218,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <touch file="boxnameadded"/>
       <antcall target="post">
          <param name="filename" value=""/>
-         <param name="path" value="${dir.folder}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-boxnameadd-end"/>
       </antcall>
 
@@ -266,7 +268,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <!--       http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=91-112-3-24.tif&path=/full/file/path/excluding/file/name&action=UAL-jhove-start -->
       <antcall target="post">
          <param name="filename" value="${tiffile}"/>
-         <param name="path" value="${folderpath}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-jhove-start"/>
       </antcall>
       <java jar="lib/jhoveapp.jar" fork="true">
@@ -284,7 +286,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       </java>
       <antcall target="post">
          <param name="filename" value="${tiffile}"/>
-         <param name="path" value="${folderpath}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-jhove-end"/>
       </antcall>
    </target>
@@ -340,7 +342,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <move file="${dir.images.source}${file.separator}${file}" todir="${dir.images.source}${file.separator}bad-files"/>
       <antcall target="post">
          <param name="filename" value="${file}"/>
-         <param name="path" value="${dir.images.source}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-badtiff"/>
       </antcall>
 
@@ -350,7 +352,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
    <target name="bagit-create">
       <antcall target="post">
          <param name="filename" value=""/>
-         <param name="path" value="${dir.images.source}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-createbag-start"/>
       </antcall>
 
@@ -387,7 +389,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       </java>
       <antcall target="post">
          <param name="filename" value=""/>
-         <param name="path" value="${dir.images.source}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-createbag-end"/>
       </antcall>
 
@@ -396,7 +398,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
    <target name="bagit-verify">
       <antcall target="post">
          <param name="filename" value=""/>
-         <param name="path" value="${dir.bag}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-verifybag-start"/>
       </antcall>
 
@@ -425,7 +427,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>-->
       <antcall target="post">
          <param name="filename" value=""/>
-         <param name="path" value="${dir.bag}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-verifybag-end"/>
       </antcall>
    </target>
@@ -437,7 +439,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <!-- TODO truncate path to start with folder; send bag file in filename -->
       <antcall target="post">
          <param name="filename" value=""/>
-         <param name="path" value="${dir.bag}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-uploadbag-start"/>
       </antcall>
 
@@ -461,7 +463,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
       <antcall target="post">
          <param name="filename" value=""/>
-         <param name="path" value="${dir.bag}"/>
+         <param name="path" value="${foldername}"/>
          <param name="action" value="UAL-uploadbag-end"/>
       </antcall>
 
@@ -604,6 +606,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
          <prop name="path" value="${path}"/>
          <prop name="action" value="${action}"/>
       </post>
+      <echo>Posted filename=${filename}&amp;path=${path}&amp;action=${action}   Result: </echo>
    </target>
 
 
