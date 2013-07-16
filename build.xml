@@ -163,11 +163,11 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <!-- get full path of current folder -->
       <property name="folderpath" location="."/>
       
-      <post to="${api.uri}" verbose="true">
-         <prop name="filename" value=""/>
-         <prop name="path" value="${folderpath}"/>
-         <prop name="action" value="bag-start"/>
-      </post>
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${folderpath}"/>
+         <param name="action" value="bag-start"/>
+      </antcall>
 
      <antcall target="rename" inheritall="true"/>
       <antcall target="metadata" inheritall="true">
@@ -187,11 +187,11 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
          <param name="host.dir" value="${host.dir}/${dir.folder}"/>
       </antcall>
       
-      <post to="${api.uri}" verbose="true">
-         <prop name="filename" value=""/>
-         <prop name="path" value="${folderpath}"/>
-         <prop name="action" value="bag-end"/>
-      </post>
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${folderpath}"/>
+         <param name="action" value="bag-end"/>
+      </antcall>
       
       <touch file="${dir.folder}/finished"/>
    </target>
@@ -204,11 +204,11 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
          
          -->
       <!-- param dir.folder inherited -->
-      <post to="${api.uri}" verbose="true">
-         <prop name="filename" value=""/>
-         <prop name="path" value="${dir.folder}"/>
-         <prop name="action" value="UAL-boxnameadd-start"/>
-      </post>
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${dir.folder}"/>
+         <param name="action" value="UAL-boxnameadd-start"/>
+      </antcall>
       
       <propertyregex property="box" input="${dir.folder}" regexp=".*\-([0-9]*)\-[0-9]*$" select="\1"/>
       <move todir=".">
@@ -219,11 +219,11 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       </move>
 
       <touch file="boxnameadded"/>
-      <post to="${api.uri}" verbose="true">
-         <prop name="filename" value=""/>
-         <prop name="path" value="${dir.folder}"/>
-         <prop name="action" value="UAL-boxnameadd-end"/>
-      </post>
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${dir.folder}"/>
+         <param name="action" value="UAL-boxnameadd-end"/>
+      </antcall>
       
    </target>
 
@@ -274,11 +274,11 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
     <target name="jhove-single-do-it" unless="jhove.uptodate">
        <!-- TODO DONE 2013-05-29 hit a url on the logging server to register this file -->
        <!--       http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=91-112-3-24.tif&path=/full/file/path/excluding/file/name&action=UAL-jhove-start -->
-       <post to="${api.uri}" verbose="true">
-          <prop name="filename" value="${tiffile}"/>
-          <prop name="path" value="${folderpath}"/>
-          <prop name="action" value="UAL-jhove-start"/>
-       </post>
+       <antcall target="post">
+          <param name="filename" value="${tiffile}"/>
+          <param name="path" value="${folderpath}"/>
+          <param name="action" value="UAL-jhove-start"/>
+       </antcall>
        <java jar="lib/jhoveapp.jar" fork="true">
             <arg value="-c"/>
             <arg value="lib/jhove.conf"/>
@@ -292,11 +292,11 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <arg value="-k"/>
             <arg value="${tiffile}"/>
         </java>
-       <post to="${api.uri}" verbose="true">
-          <prop name="filename" value="${tiffile}"/>
-          <prop name="path" value="${folderpath}"/>
-          <prop name="action" value="UAL-jhove-end"/>
-       </post>
+       <antcall target="post">
+          <param name="filename" value="${tiffile}"/>
+          <param name="path" value="${folderpath}"/>
+          <param name="action" value="UAL-jhove-end"/>
+       </antcall>
     </target>
     <target name="jhove-parse">
         <mkdir dir="${dir.output}"/>
@@ -351,21 +351,21 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         <echo>${fileline}</echo>
         <propertyregex property="file" input="${fileline}" regexp="Bad file: (.*\.[tT][iI][fF][fF]?)" select="\1" />
         <move file="${dir.images.source}${file.separator}${file}" todir="${dir.images.source}${file.separator}bad-files"/>
-       <post to="${api.uri}" verbose="true">
-          <prop name="filename" value="${file}"/>
-          <prop name="path" value="${dir.images.source}"/>
-          <prop name="action" value="UAL-badtiff"/>
-       </post>
+       <antcall target="post">
+          <param name="filename" value="${file}"/>
+          <param name="path" value="${dir.images.source}"/>
+          <param name="action" value="UAL-badtiff"/>
+       </antcall>
        
     </target>
     <!-- bagit targets: directory level -->
 
     <target name="bagit-create">
-       <post to="${api.uri}" verbose="true">
-          <prop name="filename" value=""/>
-          <prop name="path" value="${dir.images.source}"/>
-          <prop name="action" value="UAL-createbag-start"/>
-       </post>
+       <antcall target="post">
+          <param name="filename" value=""/>
+          <param name="path" value="${dir.images.source}"/>
+          <param name="action" value="UAL-createbag-start"/>
+       </antcall>
        
         <mkdir dir="${dir.logs}"/>
         <delete dir="${dir.bag}"/>
@@ -398,20 +398,20 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <arg value="--log-verbose"/>
             <arg value="--verbose"/>
         </java>
-       <post to="${api.uri}" verbose="true">
-          <prop name="filename" value=""/>
-          <prop name="path" value="${dir.images.source}"/>
-          <prop name="action" value="UAL-createbag-end"/>
-       </post>
+       <antcall target="post">
+          <param name="filename" value=""/>
+          <param name="path" value="${dir.images.source}"/>
+          <param name="action" value="UAL-createbag-end"/>
+       </antcall>
        
     </target>
 
     <target name="bagit-verify">
-       <post to="${api.uri}" verbose="true">
-          <prop name="filename" value=""/>
-          <prop name="path" value="${dir.bag}"/>
-          <prop name="action" value="UAL-verifybag-start"/>
-       </post>
+       <antcall target="post">
+          <param name="filename" value=""/>
+          <param name="path" value="${dir.bag}"/>
+          <param name="action" value="UAL-verifybag-start"/>
+       </antcall>
        
         <mkdir dir="${dir.logs}"/>
         <property name="logfile" value="${dir.logs}/bagit-verify.log"/>
@@ -437,11 +437,11 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       <replace file="${logfile}" token=" File data/" value="&#x0a;File data/"/>
       <replace file="${logfile}" token=" Bag has file" value="&#x0a;Bag has file"/>
       <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>-->
-       <post to="${api.uri}" verbose="true">
-          <prop name="filename" value=""/>
-          <prop name="path" value="${dir.bag}"/>
-          <prop name="action" value="UAL-verifybag-end"/>
-       </post>
+       <antcall target="post">
+          <param name="filename" value=""/>
+          <param name="path" value="${dir.bag}"/>
+          <param name="action" value="UAL-verifybag-end"/>
+       </antcall>
     </target>
 
 
@@ -449,11 +449,11 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
     <target name="scp-upload">
        <!-- TODO truncate path to start with folder; send bag file in filename -->
-       <post to="${api.uri}" verbose="true">
-          <prop name="filename" value=""/>
-          <prop name="path" value="${dir.bag}"/>
-          <prop name="action" value="UAL-uploadbag-start"/>
-       </post>
+       <antcall target="post">
+          <param name="filename" value=""/>
+          <param name="path" value="${dir.bag}"/>
+          <param name="action" value="UAL-uploadbag-start"/>
+       </antcall>
        
         <!-- remove .DS_Store and Thumbs.db files, in case you've inspected the bag in Finder or Windows Explorer; 
          defaultexcludes="no" is necessary because .DS_Store is by default 
@@ -473,11 +473,11 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
        <delete dir="${dir.bag}"/>
        <delete file="bag-${today.tstamp}"/>
        
-       <post to="${api.uri}" verbose="true">
-          <prop name="filename" value=""/>
-          <prop name="path" value="${dir.bag}"/>
-          <prop name="action" value="UAL-uploadbag-end"/>
-       </post>
+       <antcall target="post">
+          <param name="filename" value=""/>
+          <param name="path" value="${dir.bag}"/>
+          <param name="action" value="UAL-uploadbag-end"/>
+       </antcall>
        
     </target>
 
@@ -606,8 +606,17 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
        
     </target>
 
+   <target name="post">
+      <!-- do http post with ${filename}, ${path} and ${action} -->
+      <post to="${api.uri}" verbose="true">
+         <prop name="filename" value="${filename}"/>
+         <prop name="path" value="${path}"/>
+         <prop name="action" value="${action}"/>
+      </post>
+   </target>
 
-    <!-- Tests -->
+   
+   <!-- Tests -->
     <target name="setUp">
         <!-- preparation: delete jhove output files from previous run -->
         <echo>Set Up</echo>
