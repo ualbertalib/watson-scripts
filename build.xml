@@ -8,12 +8,16 @@
     <!-- default values, which are overridden by settings in build.properties -->
     <property name="dir.root" location="${basedir}/data"/>
     <property name="dir.source" location="testdata"/>
-    <property name="dir.metadata" location="metadata"/>
     <property name="dir.logs" location="logs"/>
+    <property name="dir.completed" location="${dir.source}-completed"/>
+
+	<mkdir dir="${dir.completed}"/>
+
+<!--    <property name="dir.metadata" location="metadata"/>
     <property name="dir.bag" location="bag"/>
     <property name="dir.data" location="data"/>
     <property name="dir.output" location="output"/>
-
+-->
     <!-- add the jars in the lib directory to the classpath -->
     <path id="main.classpath">
         <fileset dir="lib">
@@ -105,12 +109,13 @@
         <property name="log.run" value="${dir.logs}/${run.tstamp}.log"/>
         <echo>Logging to ${log.run}</echo>
         <record action="start" name="${log.run}"/>
+<echo>Looking in ${dir.source}</echo>
 
         <foreach param="dir.folder" target="check-folder" inheritall="true">
             <path>
-                <dirset dir="${dir.source}">
+                <dirset dir="${dir.source}" includes="*">
                     <!--<selector refid="folder.selector"/>-->
-                    <not>
+                   <not>
                         <selector refid="folder.finished.selector"/>
                     </not>
                 </dirset>
@@ -185,7 +190,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         <antcall target="jhove-parse" inheritall="true"> </antcall>
         <antcall target="bagit-create" inheritall="true"> </antcall>
         <antcall target="scp-upload" inheritall="true">
-            <param name="host.dir" value="${host.dir}/${dir.folder}"/>
+            <param name="host.dir" value="${host.dir}/${foldername}"/>
         </antcall>
 
         <antcall target="post">
@@ -195,6 +200,8 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         </antcall>
 
         <touch file="${dir.folder}/finished"/>
+        <move todir="${dir.completed}" file="${dir.folder}"/>
+
     </target>
 
     <target name="rename" description="Rename files to include box numbers, parsed from folder name">
@@ -217,21 +224,22 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         <!-- get box number from folder name -->
         <propertyregex property="box" input="${dir.folder}" regexp=".*\-([0-9]*)\-[0-9]*$"
             select="\1"/>
+<echo>Box: ${box}</echo>
         <!-- rename any file that matches old pattern (without box number) -->
-        <fileset id="files-to-rename" dir="." includes="**/*">
+        <fileset id="files-to-rename" dir="${dir.folder}" includes="**/*">
             <filename regex="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"/>
         </fileset>
         <pathconvert pathsep="${line.separator}" property="files" refid="files-to-rename"/>
         <echo>Files to rename:</echo>
         <echo>${files}</echo>
-        <move todir=".">
+        <move todir="${dir.folder}">
             <fileset refid="files-to-rename"/>
             <regexpmapper
                 from="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"
                 to="\1\2\-\3\-${box}\-\4\-\5\.\6"/>
         </move>
 
-        <touch file="boxnameadded"/>
+        <touch file="${dir.folder}/boxnameadded"/>
         <antcall target="post">
             <param name="filename" value=""/>
             <param name="path" value="${foldername}"/>
@@ -468,26 +476,23 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="path" value="${foldername}"/>
             <param name="action" value="UAL-uploadbag-start"/>
         </antcall>
-
+<echo>UPloading ${bagname} to ${host.dir}</echo>
         <!-- remove .DS_Store and Thumbs.db files, in case you've inspected the bag in Finder or Windows Explorer; 
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
         <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
-        <tar basedir="${dir.bag}" destfile="${bagname}" compression="gzip" includes="**/*"/>
+        <tar basedir="${dir.bag}" destfile="${dir.working}/${bagname}" compression="gzip" includes="**/*"/>
         <sshexec host="${host.name}" username="${host.user}" trust="true"
             password="${host.password}" command="mkdir -p ${host.dir}"/>
         <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true"
             failonerror="true">
-            <fileset dir="." includes="${bagname}"/>
+            <fileset dir="${dir.working}" includes="${bagname}"/>
         </scp>
         <!-- TODO DONE 2013-05-29 delete bag once successfully uploaded, to save space on drive -->
-        <!--
-        <move todir="${dir.completed}">
-            <fileset dir="${dir.bag}" includes="**/*"></fileset>
-        </move>
-        -->
+
+
         <delete dir="${dir.bag}"/>
-        <delete file="${bagname}"/>
+        <delete file="${dir.working}/${bagname}"/>
 
         <antcall target="post">
             <param name="filename" value="${bagname}"/>
@@ -644,7 +649,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
     <target name="post">
         <!-- do http post with ${filename}, ${path} and ${action} -->
-        <post to="${api.uri}" verbose="true">
+        <post to="${api.uri}" verbose="false">
             <prop name="filename" value="${filename}"/>
             <prop name="path" value="${path}"/>
             <prop name="action" value="${action}"/>
