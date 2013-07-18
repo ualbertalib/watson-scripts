@@ -157,7 +157,10 @@
         <echo>${url} -> ${bag.state}"</echo>
         <!-- if bag does not exist on server, bag.state is false -->
         <condition property="do.bag">
+		<or>
             <equals arg1="${bag.state}" arg2="false"/>
+		<isset property="force"/>
+		</or>
         </condition>
         <antcall target="run-folder" inheritall="true"/>
     </target>
@@ -191,12 +194,12 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="action" value="UAL-run-start"/>
         </antcall>
         
-        <available property="filesrenamed" unless="${folderpath}/boxnameadded"/>
+        <available property="filesrenamed" file="${folderpath}/boxnameadded"/>
 
         <antcall target="rename" inheritall="true"/>
-        <antcall target="metadata" inheritall="true"/> 
+ 	<antcall target="metadata" inheritall="true"/> 
         <antcall target="jhove-parse" inheritall="true"/> 
-        <antcall target="bagit-create" inheritall="true"/> 
+        <antcall target="bagit-create" inheritall="true"/>
         <antcall target="scp-upload" inheritall="true">
             <param name="host.dir" value="${host.dir}/${foldername}"/>
         </antcall>
