@@ -2,7 +2,6 @@
 <project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit"
     xmlns:jhove="http://hul.harvard.edu/ois/xml/ns/jhove">
 
-
     <property file="build.properties"/>
 
     <!-- default values, which are overridden by settings in build.properties -->
@@ -10,8 +9,15 @@
     <property name="dir.source" location="testdata"/>
     <property name="dir.logs" location="logs"/>
     <property name="dir.completed" location="${dir.source}-completed"/>
+    
+    <!-- which directories to process. Default: * = all; override with -Ddirset=xxxxxxxx to process 
+        a single directory -->
+    <property name="dirset" value="*"/>
 
-	<mkdir dir="${dir.completed}"/>
+    <!-- whether to be verbose in https posts. Override with -Dpost.verbose=true -->
+    <property name="post.verbose" value="false"/>
+    
+    <mkdir dir="${dir.completed}"/>
 
 <!--    <property name="dir.metadata" location="metadata"/>
     <property name="dir.bag" location="bag"/>
@@ -109,13 +115,13 @@
         <property name="log.run" value="${dir.logs}/${run.tstamp}.log"/>
         <echo>Logging to ${log.run}</echo>
         <record action="start" name="${log.run}"/>
-<echo>Looking in ${dir.source}</echo>
+        <echo>Looking in ${dir.source}</echo>
 
         <foreach param="dir.folder" target="check-folder" inheritall="true">
             <path>
-                <dirset dir="${dir.source}" includes="*">
+                <dirset dir="${dir.source}" includes="${dirset}">
                     <!--<selector refid="folder.selector"/>-->
-                   <not>
+                    <not>
                         <selector refid="folder.finished.selector"/>
                     </not>
                 </dirset>
@@ -184,11 +190,13 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="path" value="${foldername}"/>
             <param name="action" value="UAL-run-start"/>
         </antcall>
+        
+        <available property="filesrenamed" unless="${folderpath}/boxnameadded"/>
 
         <antcall target="rename" inheritall="true"/>
-        <antcall target="metadata" inheritall="true"> </antcall>
-        <antcall target="jhove-parse" inheritall="true"> </antcall>
-        <antcall target="bagit-create" inheritall="true"> </antcall>
+        <antcall target="metadata" inheritall="true"/> 
+        <antcall target="jhove-parse" inheritall="true"/> 
+        <antcall target="bagit-create" inheritall="true"/> 
         <antcall target="scp-upload" inheritall="true">
             <param name="host.dir" value="${host.dir}/${foldername}"/>
         </antcall>
@@ -204,7 +212,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
     </target>
 
-    <target name="rename" description="Rename files to include box numbers, parsed from folder name">
+    <target name="rename" description="Rename files to include box numbers, parsed from folder name" unless="filesrenamed">
         <!-- rename files to incorporate box number
          e.g. folder name: 95-131-1-595 (box = 1, folder = 595)
          file: 95-131-595-001.TIF
@@ -311,7 +319,12 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="action" value="UAL-jhove-end"/>
         </antcall>
     </target>
+
     <target name="jhove-parse">
+        <available property="jhoveparsedone" file="${dir.folder}/jhoveparsedone"/>
+        <antcall target="jhove-parse-do-it" inheritall="true"/>
+    </target>
+    <target name="jhove-parse-do-it" unless="jhoveparsedone">
         <antcall target="post">
             <param name="filename" value=""/>
             <param name="path" value="${foldername}"/>
@@ -326,7 +339,6 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         <!-- get absolute path of source directory -->
         <property name="absolute.path.source" location="${dir.folder}"/>
         <echo>absolute.path.source: ${absolute.path.source}</echo>
-        <!-- TODO make sure the path handling works on Windows: may need to use ${file.separator} instead of / in xsl -->
         <xslt in="${dir.output}/jhove-parse.xml" out="${dir.output}/fileset-all.txt"
             style="xsl/make-filesets.xsl">
             <param name="sel" expression="all"/>
@@ -347,6 +359,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         </xslt>
         <available file="${dir.output}/report-bad-tiff.txt" property="bad.tiff.exists"/>
         <antcall target="move-bad-files"/>
+        <touch file="${dir.folder}/jhoveparsedone"/>
         <antcall target="post">
             <param name="filename" value=""/>
             <param name="path" value="${foldername}"/>
@@ -476,12 +489,17 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="path" value="${foldername}"/>
             <param name="action" value="UAL-uploadbag-start"/>
         </antcall>
-<echo>UPloading ${bagname} to ${host.dir}</echo>
+        <echo>UPloading ${bagname} to ${host.dir}</echo>
         <!-- remove .DS_Store and Thumbs.db files, in case you've inspected the bag in Finder or Windows Explorer; 
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
         <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
-        <tar basedir="${dir.bag}" destfile="${dir.working}/${bagname}" compression="gzip" includes="**/*"/>
+        <!-- check whether tarball exists and is up to date: if so, use it -->
+        <uptodate property="tarball.uptodate" targetfile="${dir.working}/${bagname}">
+            <srcfiles dir="${dir.bag}" includes="**/*"/>
+        </uptodate>
+        <antcall target="make-tarball" inheritall="true"/>
+
         <sshexec host="${host.name}" username="${host.user}" trust="true"
             password="${host.password}" command="mkdir -p ${host.dir}"/>
         <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true"
@@ -500,6 +518,10 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="action" value="UAL-uploadbag-end"/>
         </antcall>
 
+    </target>
+    
+    <target name="make-tarball" unless="tarball.uptodate">
+        <tar basedir="${dir.bag}" destfile="${dir.working}/${bagname}" compression="gzip" includes="**/*"/>
     </target>
 
     <target name="final-tiff-validation" depends="metadata">
@@ -649,7 +671,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
     <target name="post">
         <!-- do http post with ${filename}, ${path} and ${action} -->
-        <post to="${api.uri}" verbose="false">
+        <post to="${api.uri}" verbose="${post.verbose}">
             <prop name="filename" value="${filename}"/>
             <prop name="path" value="${path}"/>
             <prop name="action" value="${action}"/>
