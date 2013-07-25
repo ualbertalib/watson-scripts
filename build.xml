@@ -505,12 +505,18 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
         <sshexec host="${host.name}" username="${host.user}" trust="true"
             password="${host.password}" command="mkdir -p ${host.dir}"/>
-        <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true"
+        <!-- TODO split tarball into chunks -->
+<!--        <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true"
             failonerror="true">
             <fileset dir="${dir.working}" includes="${bagname}"/>
-        </scp>
-        <!-- TODO DONE 2013-05-29 delete bag once successfully uploaded, to save space on drive -->
-
+        </scp>-->
+        
+        <exec dir="${dir.working}" executable="${split}">
+            <arg line=" -b2000m ${bagname} split_${bagname}"/> 
+        </exec>
+        <foreach target="scp-upload-file" param="filename">
+            <fileset dir="${dir.working}" includes="split_*"/>
+        </foreach>
 
         <delete dir="${dir.bag}"/>
         <delete file="${dir.working}/${bagname}"/>
@@ -523,6 +529,15 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
     </target>
     
+    <target name="scp-upload-file">
+        <retry >
+            <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true"
+                failonerror="true">
+                <fileset dir="${dir.working}" includes="${filename}"/>
+            </scp>
+        </retry>
+    </target>
+
     <target name="make-tarball" unless="tarball.uptodate">
         <tar basedir="${dir.bag}" destfile="${dir.working}/${bagname}" compression="gzip" includes="**/*"/>
     </target>
