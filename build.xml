@@ -156,12 +156,13 @@
         </loadresource>
         <echo>${url} -> ${bag.state}"</echo>
         <!-- if bag does not exist on server, bag.state is false -->
-        <condition property="do.bag">
+        <!--<condition property="do.bag">
 		<or>
             <equals arg1="${bag.state}" arg2="false"/>
 		<isset property="force"/>
 		</or>
-        </condition>
+        </condition>-->
+		<property name="do.bag" value="true"/>
         <antcall target="run-folder" inheritall="true"/>
     </target>
 
@@ -514,7 +515,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         <exec dir="${dir.working}" executable="${split}">
             <arg line=" -b2000m ${bagname} split_${bagname}"/> 
         </exec>
-        <foreach target="scp-upload-file" param="filename">
+        <foreach target="scp-upload-file" param="filename" inheritall="true">
             <fileset dir="${dir.working}" includes="split_*"/>
         </foreach>
 
@@ -530,11 +531,10 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
     </target>
     
     <target name="scp-upload-file">
+		<echo>Uploading ${filename} to ${host.dir}</echo>
         <retry >
             <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true"
-                failonerror="true">
-                <fileset dir="${dir.working}" includes="${filename}"/>
-            </scp>
+                failonerror="true" file="${filename}"/>
         </retry>
     </target>
 
