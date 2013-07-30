@@ -194,12 +194,12 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="path" value="${foldername}"/>
             <param name="action" value="UAL-run-start"/>
         </antcall>
-        
+
         <available property="filesrenamed" file="${folderpath}/boxnameadded"/>
 
         <antcall target="rename" inheritall="true"/>
- 	<antcall target="metadata" inheritall="true"/> 
-        <antcall target="jhove-parse" inheritall="true"/> 
+        <antcall target="metadata" inheritall="true"/>
+        <antcall target="jhove-parse" inheritall="true"/>
         <antcall target="bagit-create" inheritall="true"/>
         <antcall target="scp-upload" inheritall="true">
             <param name="host.dir" value="${host.dir}/${foldername}"/>
@@ -216,7 +216,8 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
     </target>
 
-    <target name="rename" description="Rename files to include box numbers, parsed from folder name" unless="filesrenamed">
+    <target name="rename" description="Rename files to include box numbers, parsed from folder name"
+        unless="filesrenamed">
         <!-- rename files to incorporate box number
          e.g. folder name: 95-131-1-595 (box = 1, folder = 595)
          file: 95-131-595-001.TIF
@@ -236,10 +237,11 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         <!-- get box number from folder name -->
         <propertyregex property="box" input="${dir.folder}" regexp=".*\-([0-9]*)\-[0-9]*$"
             select="\1"/>
-<echo>Box: ${box}</echo>
+        <echo>Box: ${box}</echo>
         <!-- rename any file that matches old pattern (without box number) -->
         <fileset id="files-to-rename" dir="${dir.folder}" includes="**/*">
-            <filename regex="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"/>
+            <filename regex="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"
+            />
         </fileset>
         <pathconvert pathsep="${line.separator}" property="files" refid="files-to-rename"/>
         <echo>Files to rename:</echo>
@@ -262,7 +264,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
     <!-- JHOVE targets -->
     <!-- prepare image metadata, using JHove -->
-    <target name="metadata" description="Create image metadata using jhove for this item">
+    <target name="metadata" description="Create image metadata using jhove for this item" unless="skip.metadata">
         <foreach param="tiffile" target="jhove-single" inheritall="true">
             <path id="tif.path">
                 <fileset dir="${dir.folder}" includes="**/*.tif **/*.TIF **/*.tiff **/*.TIFF"/>
@@ -399,7 +401,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
     </target>
     <!-- bagit targets: directory level -->
 
-    <target name="bagit-create">
+    <target name="bagit-create" unless="skip.bagit-create">
         <antcall target="post">
             <param name="filename" value=""/>
             <param name="path" value="${foldername}"/>
@@ -486,7 +488,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
     <!-- scp target -->
 
-    <target name="scp-upload">
+    <target name="scp-upload" description="Upload bag to CWRC server" unless="skip.scp-upload">
         <property name="bagname" value="bag-${foldername}_${today.tstamp}.tar.gz"/>
         <antcall target="post">
             <param name="filename" value="${bagname}"/>
