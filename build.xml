@@ -505,24 +505,41 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <srcfiles dir="${dir.bag}" includes="**/*"/>
         </uptodate>
         <antcall target="make-tarball" inheritall="true"/>
-
+        <delete dir="${dir.bag}"/>
+        
+        <!-- create directory on CWRC server -->
         <sshexec host="${host.name}" username="${host.user}" trust="true"
             password="${host.password}" command="mkdir -p ${host.dir}"/>
-        <!-- TODO split tarball into chunks -->
-<!--        <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true"
-            failonerror="true">
-            <fileset dir="${dir.working}" includes="${bagname}"/>
-        </scp>-->
-        
+
+        <!-- split tarball into chunks -->
+        <echo>Split bag tarball</echo>
         <exec dir="${dir.working}" executable="${split}">
             <arg line=" -b2000m ${bagname} split_${bagname}"/> 
         </exec>
+        <delete file="${dir.working}/${bagname}"/>
+        
+        <!-- upload chunks with rsync -->
+        <echo>Create upload script ${dir.working}/upload.sh</echo>
+        <echo file="${dir.working}/upload.sh">#!/bin/sh
+${rsync} -e ssh -av \
+split_* \
+${host.user}:${host.password}@${host.name}:${host.dir}
+rm split_*
+        </echo>
+        <!-- set permissions -->
+        <chmod file="${dir.working}/upload.sh" perm="u+rx"/>
+        <!-- execute -->
+        <echo>Run upload script</echo>
+        <exec dir="${dir.working}" executable="${bash}">
+            <arg line="./upload.sh"/>
+        </exec>
+        <echo>Finished uploading</echo>
+        <!--
         <foreach target="scp-upload-file" param="filename" inheritall="true">
             <fileset dir="${dir.working}" includes="split_*"/>
         </foreach>
-
-        <delete dir="${dir.bag}"/>
-        <delete file="${dir.working}/${bagname}"/>
+        -->
+        
 
         <antcall target="post">
             <param name="filename" value="${bagname}"/>
@@ -690,13 +707,17 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
     </target>
 
     <target name="post">
+        <!-- get timestamp -->
+        <tstamp>
+            <format property="NOW" pattern="yyyy-MM-dd HH:mm:ss"/>
+        </tstamp>
         <!-- do http post with ${filename}, ${path} and ${action} -->
         <post to="${api.uri}" verbose="${post.verbose}">
             <prop name="filename" value="${filename}"/>
             <prop name="path" value="${path}"/>
             <prop name="action" value="${action}"/>
         </post>
-        <echo>Posted filename=${filename}&amp;path=${path}&amp;action=${action} Result: </echo>
+        <echo>${NOW} Posted filename=${filename}&amp;path=${path}&amp;action=${action}</echo>
     </target>
 
     <target name="testboxrename">
