@@ -120,7 +120,7 @@
         <foreach param="dir.folder" target="check-folder" inheritall="true">
             <path>
                 <dirset dir="${dir.source}" includes="${dirset}">
-                    <!--<selector refid="folder.selector"/>-->
+                    <selector refid="folder.selector"/>
                     <not>
                         <selector refid="folder.finished.selector"/>
                     </not>
@@ -156,13 +156,12 @@
         </loadresource>
         <echo>${url} -> ${bag.state}"</echo>
         <!-- if bag does not exist on server, bag.state is false -->
-        <!--<condition property="do.bag">
-		<or>
-            <equals arg1="${bag.state}" arg2="false"/>
-		<isset property="force"/>
-		</or>
-        </condition>-->
-		<property name="do.bag" value="true"/>
+        <condition property="do.bag">
+            <or>
+                <equals arg1="${bag.state}" arg2="false"/>
+                <isset property="force"/>
+            </or>
+        </condition>
         <antcall target="run-folder" inheritall="true"/>
     </target>
 
@@ -177,17 +176,17 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       
       -->
 
+        <!-- get full path of current folder -->
+        <property name="folderpath" location="."/>
+        
         <property name="dir.working" value="${dir.run}/${foldername}"/>
-        <property name="dir.metadata" value="${dir.working}/metadata"/>
+        <property name="dir.metadata" value="${folderpath}/metadata"/>
         <property name="dir.output" value="${dir.working}/output"/>
-        <property name="dir.bag" value="${dir.working}/bag"/>
+
         <mkdir dir="${dir.working}"/>
         <mkdir dir="${dir.metadata}"/>
         <mkdir dir="${dir.output}"/>
-        <mkdir dir="${dir.bag}"/>
 
-        <!-- get full path of current folder -->
-        <property name="folderpath" location="."/>
         <!-- note: inherits foldername -->
         <antcall target="post">
             <param name="filename" value=""/>
@@ -409,8 +408,6 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         </antcall>
 
         <mkdir dir="${dir.logs}"/>
-        <delete dir="${dir.bag}"/>
-        <mkdir dir="${dir.bag}"/>
 
         <property name="log.bagit-create" value="${dir.logs}/${foldername}-bagit-create.log"/>
 
@@ -421,24 +418,13 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
         <!-- remove evil .DS_Store and Thumbs.db files -->
         <delete dir="${dir.folder}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
-        <delete dir="${dir.metadata}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
 
-        <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
-        <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher"
-            maxmemory="512m" fork="true" inputstring="" output="${log.bagit-create}"
-            failonerror="true">
-            <jvmarg value="-Dclassworlds.conf=config/bag.classworlds.conf"/>
-            <jvmarg value="-Dapp.home=."/>
-            <!-- force unix line endings - needed to get same md5 hashes in output of test for bagit-create -->
-            <jvmarg value="-Dline.separator=&#10;"/>
-            <!--<jvmarg value="-Dlog_file=${logshome}/processing/bagit-${dirname}.log"/>-->
-            <arg value="${bag.command}"/>
-            <arg value="${dir.bag}"/>
-            <arg value="${dir.folder}/*"/>
-            <arg value="${dir.metadata}/*"/>
-            <arg value="--log-verbose"/>
-            <arg value="--verbose"/>
-        </java>
+        <!-- bag original folder in place -->
+        <exec executable="${bagit}" dir="${dir.source}">
+            <arg value="--processes ${bagit.processes}"/>
+            <arg value="${dir.folder}"/>
+        </exec>
+
         <antcall target="post">
             <param name="filename" value=""/>
             <param name="path" value="${foldername}"/>
@@ -495,17 +481,16 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="path" value="${foldername}"/>
             <param name="action" value="UAL-uploadbag-start"/>
         </antcall>
-        <echo>UPloading ${bagname} to ${host.dir}</echo>
+        <echo>Uploading ${bagname} to ${host.dir}</echo>
         <!-- remove .DS_Store and Thumbs.db files, in case you've inspected the bag in Finder or Windows Explorer; 
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
-        <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
+        <delete dir="${dir.folder}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
         <!-- check whether tarball exists and is up to date: if so, use it -->
         <uptodate property="tarball.uptodate" targetfile="${dir.working}/${bagname}">
-            <srcfiles dir="${dir.bag}" includes="**/*"/>
+            <srcfiles dir="${dir.folder}" includes="**/*"/>
         </uptodate>
         <antcall target="make-tarball" inheritall="true"/>
-        <delete dir="${dir.bag}"/>
         
         <!-- create directory on CWRC server -->
         <sshexec host="${host.name}" username="${host.user}" trust="true"
@@ -516,9 +501,10 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         <exec dir="${dir.working}" executable="${split}">
             <arg line=" -b2000m ${bagname} split_${bagname}"/> 
         </exec>
+        <!-- delete tarball -->
         <delete file="${dir.working}/${bagname}"/>
         
-        <!-- upload chunks with rsync -->
+        <!-- upload chunks with rsync; delete chunks when done -->
         <echo>Create upload script ${dir.working}/upload.sh</echo>
         <echo file="${dir.working}/upload.sh">#!/bin/sh
 ${rsync} -e ssh -av \
@@ -558,7 +544,7 @@ rm split_*
     </target>
 
     <target name="make-tarball" unless="tarball.uptodate">
-        <tar basedir="${dir.bag}" destfile="${dir.working}/${bagname}" compression="gzip" includes="**/*"/>
+        <tar basedir="${dir.folder}" destfile="${dir.working}/${bagname}" compression="gzip" includes="**/*"/>
     </target>
 
     <target name="final-tiff-validation" depends="metadata">
