@@ -132,29 +132,26 @@
         <!--
       4) At the beginning of processing a bag, notify the HUCO server that you are beginning a bag:
       
-      http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no value for bags]&path=/full/file/path/excluding/file/name&action=bag-get
+      http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no value for bags]&path=itemname&action=want-bag
       
-      this should return false if the bag doesn't exist (Harvey will parse the bag id from the path). 
-      If it returns NOT false, it will provide the current bag state (and a timestamp). In future, we 
-      might add behaviour here based on the state, but for the moment, you can probably quit if it 
-      returns a status. -->
+      this should return true if the bag doesn't exist (Harvey will parse the bag id from the path). 
+       -->
 
         <!-- get Watson folder name e.g. 73-191-1-234 -->
         <basename property="foldername" file="${dir.folder}"/>
         <!-- fetch bag state into property bag.state -->
-        <property name="url" value="filename=&amp;path=${foldername}&amp;action=UAL-bag-getstatus"/>
-        <loadresource property="bag.state">
+        <property name="url" value="filename=&amp;path=${foldername}&amp;action=UAL-want-bag"/>
+        <loadresource property="want.bag">
             <url url="${api.uri}?${url}"/>
         </loadresource>
-        <echo>${url} -> ${bag.state}"</echo>
-        <!-- if bag does not exist on server, bag.state is false -->
-        <!--<condition property="do.bag">
-		<or>
-            <equals arg1="${bag.state}" arg2="false"/>
-		<isset property="force"/>
-		</or>
-        </condition>-->
-		<property name="do.bag" value="true"/>
+        <echo>${url} -> ${want.bag}"</echo>
+        <!-- if bag does not exist on server, want.bag is true -->
+        <condition property="do.bag">
+			<or>
+            	<equals arg1="${want.bag}" arg2="true"/>
+				<isset property="force"/>
+			</or>
+        </condition>
         <antcall target="run-folder" inheritall="true"/>
     </target>
 
