@@ -106,35 +106,47 @@
    -->
 
     <!-- run -->
-    <target name="run" description="Do a run" depends="init">
-        <echo>${basedir}</echo>
-        <mkdir dir="${dir.data}"/>
-        <mkdir dir="${dir.logs}"/>
-        <property name="dir.run" value="${dir.data}/run/${today.tstamp}"/>
-        <mkdir dir="${dir.run}"/>
-        <property name="log.run" value="${dir.logs}/${run.tstamp}.log"/>
-        <echo>Logging to ${log.run}</echo>
-        <record action="start" name="${log.run}"/>
-        <echo>Looking in ${dir.source}</echo>
+   <target name="run" description="Do a run" depends="init">
+      <echo>${basedir}</echo>
+      <mkdir dir="${dir.data}"/>
+      <mkdir dir="${dir.logs}"/>
+      <property name="dir.run" value="${dir.data}/run/${today.tstamp}"/>
+      <mkdir dir="${dir.run}"/>
+      <property name="log.run" value="${dir.logs}/${run.tstamp}.log"/>
+      <echo>Logging to ${log.run}</echo>
+      <record action="start" name="${log.run}"/>
+      <echo>Looking in ${dir.source}</echo>
 
-        <foreach param="dir.folder" target="check-folder" inheritall="true">
-            <path>
-                <dirset dir="${dir.source}" includes="${dirset}">
-                    <!--<selector refid="folder.selector"/>-->
-                    <not>
-                        <selector refid="folder.finished.selector"/>
-                    </not>
-                </dirset>
-            </path>
-        </foreach>
+      <foreach param="dir.folder" target="check-folder" inheritall="true">
+         <path>
+            <dirset dir="${dir.source}" includes="${dirset}">
+               <!--<selector refid="folder.selector"/>-->
+               <not>
+                  <selector refid="folder.finished.selector"/>
+               </not>
+            </dirset>
+         </path>
+      </foreach>
 
-        <tstamp>
-            <format property="end.tstamp" pattern="yyyy-MM-dd'T'HH:mm:ss"/>
-        </tstamp>
-        <echo>End run: ${end.tstamp}</echo>
-        <record action="stop" name="${log.run}"/>
-        <echo>Run log: ${log.run}</echo>
-    </target>
+      <tstamp>
+         <format property="end.tstamp" pattern="yyyy-MM-dd'T'HH:mm:ss"/>
+      </tstamp>
+      <echo>End run: ${end.tstamp}</echo>
+      <record action="stop" name="${log.run}"/>
+      <echo>Run log: ${log.run}</echo>
+
+      <!-- generate list of files on USB drive -->
+      <exec executable="/bin/bash" output="${dir.run}/diskfilelist.txt">
+         <arg value="${basedir}/diskfilelist.sh"/>
+         <arg value="${dir.source}"/>
+      </exec>
+
+      <!-- upload log file and file list -->
+      <scp file="${log.run}" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
+      <scp file="${dir.run}/diskfilelist.txt" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
+
+
+   </target>
 
     <target name="check-folder" description="Check status of folder on server" depends="init">
         <!--
