@@ -137,6 +137,7 @@
       <scp file="${log.run}" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
       <scp file="${dir.run}/diskfilelist.txt" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
 
+
    </target>
 
     <target name="check-folder" description="Check status of folder on server" depends="init">
