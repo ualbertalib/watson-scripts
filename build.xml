@@ -8,7 +8,6 @@
     <property name="dir.root" location="${basedir}/data"/>
     <property name="dir.source" location="testdata"/>
     <property name="dir.logs" location="logs"/>
-    <property name="dir.completed" location="${dir.source}-completed"/>
     
     <!-- which directories to process. Default: * = all; override with -Ddirset=xxxxxxxx to process 
         a single directory -->
@@ -17,13 +16,6 @@
     <!-- whether to be verbose in https posts. Override with -Dpost.verbose=true -->
     <property name="post.verbose" value="false"/>
     
-    <mkdir dir="${dir.completed}"/>
-
-<!--    <property name="dir.metadata" location="metadata"/>
-    <property name="dir.bag" location="bag"/>
-    <property name="dir.data" location="data"/>
-    <property name="dir.output" location="output"/>
--->
     <!-- add the jars in the lib directory to the classpath -->
     <path id="main.classpath">
         <fileset dir="lib">
@@ -106,73 +98,71 @@
    -->
 
     <!-- run -->
-    <target name="run" description="Do a run" depends="init">
-        <echo>${basedir}</echo>
-        <mkdir dir="${dir.data}"/>
-        <mkdir dir="${dir.logs}"/>
-        <property name="dir.run" value="${dir.data}/run/${today.tstamp}"/>
-        <mkdir dir="${dir.run}"/>
-        <property name="log.run" value="${dir.logs}/${run.tstamp}.log"/>
-        <echo>Logging to ${log.run}</echo>
-        <record action="start" name="${log.run}"/>
-        <echo>Looking in ${dir.source}</echo>
+   <target name="run" description="Do a run" depends="init">
+      <echo>${basedir}</echo>
+      <mkdir dir="${dir.data}"/>
+      <mkdir dir="${dir.logs}"/>
+      <property name="dir.run" value="${dir.data}/run/${today.tstamp}"/>
+      <mkdir dir="${dir.run}"/>
+      <property name="log.run" value="${dir.logs}/${run.tstamp}.log"/>
+      <echo>Logging to ${log.run}</echo>
+      <record action="start" name="${log.run}"/>
+      <echo>Looking in ${dir.source}</echo>
 
-        <foreach param="dir.folder" target="check-folder" inheritall="true">
-            <path>
-                <dirset dir="${dir.source}" includes="${dirset}">
-                    <!--<selector refid="folder.selector"/>-->
-                    <not>
-                        <selector refid="folder.finished.selector"/>
-                    </not>
-                </dirset>
-            </path>
-        </foreach>
+      <foreach param="dir.folder" target="check-folder" inheritall="true">
+         <path>
+            <dirset dir="${dir.source}" includes="${dirset}">
+               <!--<selector refid="folder.selector"/>-->
+               <not>
+                  <selector refid="folder.finished.selector"/>
+               </not>
+            </dirset>
+         </path>
+      </foreach>
 
-        <tstamp>
-            <format property="end.tstamp" pattern="yyyy-MM-dd'T'HH:mm:ss"/>
-        </tstamp>
-        <echo>End run: ${end.tstamp}</echo>
-        <record action="stop" name="${log.run}"/>
-        <echo>Run log: ${log.run}</echo>
-       
-       <!-- generate list of files on USB drive -->
-       
-       <!-- upload log file and file list -->
-       <scp file="${log.run}" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
-       <exec executable="/bin/bash" output="${dir.run}/diskfilelist.txt">
-          <arg value="${basedir}/diskfilelist.sh"/>
-          <arg value="${dir.source}"/>
-       </exec>
-       <scp file="${dir.run}/diskfilelist.txt" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
-    </target>
+      <tstamp>
+         <format property="end.tstamp" pattern="yyyy-MM-dd'T'HH:mm:ss"/>
+      </tstamp>
+      <echo>End run: ${end.tstamp}</echo>
+      <record action="stop" name="${log.run}"/>
+      <echo>Run log: ${log.run}</echo>
+
+      <!-- generate list of files on USB drive -->
+      <exec executable="/bin/bash" output="${dir.run}/diskfilelist.txt">
+         <arg value="${basedir}/diskfilelist.sh"/>
+         <arg value="${dir.source}"/>
+      </exec>
+
+      <!-- upload log file and file list -->
+      <scp file="${log.run}" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
+      <scp file="${dir.run}/diskfilelist.txt" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
+
+   </target>
 
     <target name="check-folder" description="Check status of folder on server" depends="init">
         <!--
       4) At the beginning of processing a bag, notify the HUCO server that you are beginning a bag:
       
-      http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no value for bags]&path=/full/file/path/excluding/file/name&action=bag-get
+      http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no value for bags]&path=itemname&action=want-bag
       
-      this should return false if the bag doesn't exist (Harvey will parse the bag id from the path). 
-      If it returns NOT false, it will provide the current bag state (and a timestamp). In future, we 
-      might add behaviour here based on the state, but for the moment, you can probably quit if it 
-      returns a status. -->
+      this should return true if the bag doesn't exist (Harvey will parse the bag id from the path). 
+       -->
 
         <!-- get Watson folder name e.g. 73-191-1-234 -->
         <basename property="foldername" file="${dir.folder}"/>
         <!-- fetch bag state into property bag.state -->
-        <property name="url" value="filename=&amp;path=${foldername}&amp;action=UAL-bag-getstatus"/>
-        <loadresource property="bag.state">
+        <property name="url" value="filename=&amp;path=${foldername}&amp;action=UAL-want-bag"/>
+        <loadresource property="want.bag">
             <url url="${api.uri}?${url}"/>
         </loadresource>
-        <echo>${url} -> ${bag.state}"</echo>
-        <!-- if bag does not exist on server, bag.state is false -->
-        <!--<condition property="do.bag">
-		<or>
-            <equals arg1="${bag.state}" arg2="false"/>
-		<isset property="force"/>
-		</or>
-        </condition>-->
-		<property name="do.bag" value="true"/>
+        <echo>${url} -> ${want.bag}"</echo>
+        <!-- if bag does not exist on server, want.bag is true -->
+        <condition property="do.bag">
+			<or>
+            	<equals arg1="${want.bag}" arg2="true"/>
+				<isset property="force"/>
+			</or>
+        </condition>
         <antcall target="run-folder" inheritall="true"/>
     </target>
 
@@ -204,6 +194,13 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="path" value="${foldername}"/>
             <param name="action" value="UAL-run-start"/>
         </antcall>
+        
+        <echo>
+dir.working: ${dir.working}        
+dir.metadata: ${dir.metadata}
+dir.output: ${dir.output}
+dir.bag: ${dir.bag}
+</echo>
 
         <available property="filesrenamed" file="${folderpath}/boxnameadded"/>
 
@@ -211,7 +208,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         <antcall target="metadata" inheritall="true"/>
         <antcall target="jhove-parse" inheritall="true"/>
         <antcall target="bagit-create" inheritall="true"/>
-        <antcall target="scp-upload" inheritall="true">
+        <antcall target="upload" inheritall="true">
             <param name="host.dir" value="${host.dir}/${foldername}"/>
         </antcall>
 
@@ -221,8 +218,8 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="action" value="UAL-run-end"/>
         </antcall>
 
-        <touch file="${dir.folder}/finished"/>
-        <move todir="${dir.completed}" file="${dir.folder}"/>
+       <!-- <touch file="${dir.folder}/finished"/>
+        <move todir="${dir.completed}" file="${dir.folder}"/>-->
 
     </target>
 
@@ -294,13 +291,9 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
         <echo>tiffile: ${tiffile}</echo>
         <echo>tiff.relative.path: ${tiff.relative.path}</echo>
 
-        <propertyregex property="dirname" input="${tiff.relative.path}"
-            regexp="(.*)\${file.separator}.*\.[tT][iI][fF][fF]?" select="\1"/>
-        <echo>dirname: ${dirname}</echo>
         <propertyregex property="filename" input="${tiff.relative.path}"
             regexp="(.*)\.[tT][iI][fF][fF]?" select="\1"/>
         <echo>filename: ${filename}</echo>
-        <mkdir dir="${dir.metadata}/${dirname}"/>
         <uptodate property="jhove.uptodate" srcfile="${tiffile}"
             targetfile="${dir.metadata}${file.separator}${filename}.xml"/>
         <antcall target="jhove-single-do-it" inheritall="true"/>
@@ -337,7 +330,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
     </target>
 
     <target name="jhove-parse">
-        <available property="jhoveparsedone" file="${dir.folder}/jhoveparsedone"/>
+        <available property="jhoveparsedone" file="${dir.metadata}/jhoveparsedone"/>
         <antcall target="jhove-parse-do-it" inheritall="true"/>
     </target>
     <target name="jhove-parse-do-it" unless="jhoveparsedone">
@@ -374,7 +367,10 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
             <param name="output" expression="${dir.output}"/>
         </xslt>
         <available file="${dir.output}/report-bad-tiff.txt" property="bad.tiff.exists"/>
-        <antcall target="move-bad-files"/>
+        <!-- move output files to metadata dir, so will be included in bag -->
+        <move todir="${dir.metadata}">
+        	<fileset dir="${dir.output}" includes="*"/>
+    	</move>
 		<antcall target="post">
             <param name="filename" value=""/>
             <param name="path" value="${foldername}"/>
@@ -493,7 +489,7 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
 
     <!-- scp target -->
 
-    <target name="scp-upload" description="Upload bag to CWRC server" unless="skip.scp-upload">
+    <target name="upload" description="Upload bag to CWRC server" unless="skip.upload">
         <property name="bagname" value="bag-${foldername}_${today.tstamp}.tar.gz"/>
         <antcall target="post">
             <param name="filename" value="${bagname}"/>
@@ -540,7 +536,7 @@ rm split_*
         </exec>
         <echo>Finished uploading</echo>
         <!--
-        <foreach target="scp-upload-file" param="filename" inheritall="true">
+        <foreach target="upload-file" param="filename" inheritall="true">
             <fileset dir="${dir.working}" includes="split_*"/>
         </foreach>
         -->
@@ -554,7 +550,7 @@ rm split_*
 
     </target>
     
-    <target name="scp-upload-file">
+    <target name="upload-file">
 		<echo>Uploading ${filename} to ${host.dir}</echo>
         <retry >
             <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true"
@@ -879,7 +875,7 @@ rm split_*
             expected="tests/bag-create/manifest-md5.txt"/>
     </target>
 
-    <target name="test_scp-upload">
+    <target name="test_upload">
         <antcall target="bagit-create" inheritall="yes">
             <param name="dir.bag" value="${dir.output}/bag-create"/>
             <param name="dir.folder" value="tests/data"/>
@@ -889,15 +885,15 @@ rm split_*
             <param name="dir.bag" value="${dir.output}/bag-create"/>
         </antcall>
         <sshexec host="${host.name}" username="${host.user}" trust="true"
-            password="${host.password}" command="rm -rf ${host.dir}/test_scp-upload"/>
-        <antcall target="scp-upload" inheritall="yes">
-            <param name="host.dir" value="${host.dir}/test_scp-upload"/>
+            password="${host.password}" command="rm -rf ${host.dir}/test_upload"/>
+        <antcall target="upload" inheritall="yes">
+            <param name="host.dir" value="${host.dir}/test_upload"/>
             <param name="dir.bag" value="${dir.output}/bag-create"/>
         </antcall>
         <au:expectfailure>
-            <antcall target="scp-upload" inheritall="yes">
+            <antcall target="upload" inheritall="yes">
                 <param name="host.password" value="nope"/>
-                <param name="host.dir" value="${host.dir}/test_scp-upload"/>
+                <param name="host.dir" value="${host.dir}/test_upload"/>
             </antcall>
         </au:expectfailure>
     </target>
