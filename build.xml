@@ -1,57 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit"
-    xmlns:jhove="http://hul.harvard.edu/ois/xml/ns/jhove">
+<project basedir="." default="dist" name="Watson" xmlns:au="antlib:org.apache.ant.antunit" xmlns:jhove="http://hul.harvard.edu/ois/xml/ns/jhove">
 
-    <property file="build.properties"/>
+   <property file="build.properties"/>
 
-    <!-- default values, which are overridden by settings in build.properties -->
-    <property name="dir.root" location="${basedir}/data"/>
-    <property name="dir.source" location="testdata"/>
-    <property name="dir.logs" location="logs"/>
-    
-    <!-- which directories to process. Default: * = all; override with -Ddirset=xxxxxxxx to process 
+   <!-- default values, which are overridden by settings in build.properties -->
+   <property name="dir.root" location="${basedir}/data"/>
+   <property name="dir.source" location="testdata"/>
+   <property name="dir.logs" location="logs"/>
+
+   <!-- which directories to process. Default: * = all; override with -Ddirset=xxxxxxxx to process 
         a single directory -->
-    <property name="dirset" value="*"/>
+   <property name="dirset" value="*"/>
 
-    <!-- whether to be verbose in https posts. Override with -Dpost.verbose=true -->
-    <property name="post.verbose" value="false"/>
-    
-    <!-- add the jars in the lib directory to the classpath -->
-    <path id="main.classpath">
-        <fileset dir="lib">
-            <include name="**/*.jar"/>
-        </fileset>
-        <pathelement path="${java.class.path}"/>
-    </path>
-    <!-- check that all the extra tasks are available; fail with a message if any are missing -->
+   <!-- set cleanup=false to leave bag artefacts in place -->
+   <property name="cleanup" value="true"/>
 
-    <available resource="net/sf/antcontrib/antlib.xml" property="available.antcontrib"
-        classpathref="main.classpath"/>
-    <fail unless="available.antcontrib">**************** Can't find antcontrib</fail>
-    <available classname="com.oopsconsultancy.xmltask.ant.XmlTask" property="available.xmltask"
-        classpathref="main.classpath"/>
-    <fail unless="available.xmltask">**************** Can't find xmltask</fail>
+   <!-- whether to be verbose in https posts. Override with -Dpost.verbose=true -->
+   <property name="post.verbose" value="false"/>
 
+   <!-- add the jars in the lib directory to the classpath -->
+   <path id="main.classpath">
+      <fileset dir="lib">
+         <include name="**/*.jar"/>
+      </fileset>
+      <pathelement path="${java.class.path}"/>
+   </path>
+   <!-- check that all the extra tasks are available; fail with a message if any are missing -->
 
-
-    <!-- declare extra tasks -->
-    <taskdef resource="net/sf/antcontrib/antlib.xml" classpathref="main.classpath"/>
-    <taskdef name="xmltask" classname="com.oopsconsultancy.xmltask.ant.XmlTask"
-        classpathref="main.classpath"/>
-    <taskdef resource="org/apache/ant/antunit/antlib.xml" uri="antlib:org.apache.ant.antunit"
-        classpath="lib/ant-antunit-1.2.jar"/>
-
-    <import file="build-import-utilities.xml"/>
-
-    <tstamp>
-        <format property="today.tstamp" pattern="yyyy-MM-dd"/>
-        <format property="run.tstamp" pattern="yyyy-MM-dd'T'HH-mm-ss"/>
-    </tstamp>
+   <available resource="net/sf/antcontrib/antlib.xml" property="available.antcontrib" classpathref="main.classpath"/>
+   <fail unless="available.antcontrib">**************** Can't find antcontrib</fail>
+   <available classname="com.oopsconsultancy.xmltask.ant.XmlTask" property="available.xmltask" classpathref="main.classpath"/>
+   <fail unless="available.xmltask">**************** Can't find xmltask</fail>
 
 
-    <!-- script selector - to select the images which has a web presentation -->
-    <selector id="tiff.url.exists.selector">
-        <scriptselector language="javascript" xml:space="preserve">
+
+   <!-- declare extra tasks -->
+   <taskdef resource="net/sf/antcontrib/antlib.xml" classpathref="main.classpath"/>
+   <taskdef name="xmltask" classname="com.oopsconsultancy.xmltask.ant.XmlTask" classpathref="main.classpath"/>
+   <taskdef resource="org/apache/ant/antunit/antlib.xml" uri="antlib:org.apache.ant.antunit" classpath="lib/ant-antunit-1.2.jar"/>
+
+   <import file="build-import-utilities.xml"/>
+
+   <tstamp>
+      <format property="today.tstamp" pattern="yyyy-MM-dd"/>
+      <format property="run.tstamp" pattern="yyyy-MM-dd'T'HH-mm-ss"/>
+   </tstamp>
+
+
+   <!-- script selector - to select the images which has a web presentation -->
+   <selector id="tiff.url.exists.selector">
+      <scriptselector language="javascript" xml:space="preserve">
          importClass(java.net.URL);
          importClass(java.net.HttpURLConnection);
          var imagepath = filename.replace("\\", "/");
@@ -66,30 +64,30 @@
          echo.perform();-->
          self.setSelected(connection.getResponseCode() == HttpURLConnection.HTTP_OK);
       </scriptselector>
-    </selector>
+   </selector>
 
-    <!-- select Watson folders, with names in this form: year-accession#-box#-folder# -->
-    <selector id="folder.selector">
-        <scriptselector language="javascript" xml:space="preserve"> 
+   <!-- select Watson folders, with names in this form: year-accession#-box#-folder# -->
+   <selector id="folder.selector">
+      <scriptselector language="javascript" xml:space="preserve"> 
          self.setSelected(filename.match([0-9]{2}\-[0-9]*\-[0-9]*\-[0-9]*$/) != null); 
       </scriptselector>
-    </selector>
+   </selector>
 
-    <selector id="folder.finished.selector">
-        <scriptselector language="javascript" xml:space="preserve"> 
+   <selector id="folder.finished.selector">
+      <scriptselector language="javascript" xml:space="preserve"> 
          if (file.isDirectory()) {
                var marker = new java.io.File(file, "finished");
                self.setSelected(marker.exists());
             }
       </scriptselector>
-    </selector>
+   </selector>
 
 
-    <!-- TODO DONE 2013-05-29 run rename-with-box target: to rename TIFFs to include box number, from directory name
+   <!-- TODO DONE 2013-05-29 run rename-with-box target: to rename TIFFs to include box number, from directory name
          - drop flag file "boxnameadded" in folder when done -->
 
 
-    <!-- TODO DONE 2013-05-29 make it run at folder level rather than at top level:
+   <!-- TODO DONE 2013-05-29 make it run at folder level rather than at top level:
       change "run" task to "run-folder" - create new "run" task that calls
       run-folder in every folder - drop flag file "finished" in 
       folder to mark status (do not run again on "finished" folders 
@@ -97,51 +95,51 @@
    (ignore folders that don't match)
    -->
 
-    <!-- run -->
-    <target name="run" description="Do a run" depends="init">
-        <echo>${basedir}</echo>
-        <mkdir dir="${dir.data}"/>
-        <mkdir dir="${dir.logs}"/>
-        <property name="dir.run" value="${dir.data}/run/${today.tstamp}"/>
-        <mkdir dir="${dir.run}"/>
-        <property name="log.run" value="${dir.logs}/${run.tstamp}.log"/>
-        <echo>Logging to ${log.run}</echo>
-        <record action="start" name="${log.run}"/>
-        <echo>Looking in ${dir.source}</echo>
+   <!-- run -->
+   <target name="run" description="Do a run" depends="init">
+      <echo>${basedir}</echo>
+      <mkdir dir="${dir.data}"/>
+      <mkdir dir="${dir.logs}"/>
+      <property name="dir.run" value="${dir.data}/run/${today.tstamp}"/>
+      <mkdir dir="${dir.run}"/>
+      <property name="log.run" value="${dir.logs}/${run.tstamp}.log"/>
+      <echo>Logging to ${log.run}</echo>
+      <record action="start" name="${log.run}"/>
+      <echo>Looking in ${dir.source}</echo>
 
-        <foreach param="dir.folder" target="check-folder" inheritall="true">
-            <path>
-                <dirset dir="${dir.source}" includes="${dirset}">
-                    <!--<selector refid="folder.selector"/>-->
-                    <not>
-                        <selector refid="folder.finished.selector"/>
-                    </not>
-                </dirset>
-            </path>
-        </foreach>
+      <foreach param="dir.folder" target="check-folder" inheritall="true">
+         <path>
+            <dirset dir="${dir.source}" includes="${dirset}">
+               <!--<selector refid="folder.selector"/>-->
+               <not>
+                  <selector refid="folder.finished.selector"/>
+               </not>
+            </dirset>
+         </path>
+      </foreach>
 
-        <tstamp>
-            <format property="end.tstamp" pattern="yyyy-MM-dd'T'HH:mm:ss"/>
-        </tstamp>
-        <echo>End run: ${end.tstamp}</echo>
-        <record action="stop" name="${log.run}"/>
-        <echo>Run log: ${log.run}</echo>
-       
-       <!-- generate list of files on USB drive -->
-       <exec executable="/bin/bash" output="${dir.run}/diskfilelist.txt">
-          <arg value="${basedir}/diskfilelist.sh"/>
-          <arg value="${dir.source}"/>
-       </exec>
-       
-       <!-- upload log file and file list -->
-       <scp file="${log.run}" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
-       <scp file="${dir.run}/diskfilelist.txt" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
-       
-       
-    </target>
+      <tstamp>
+         <format property="end.tstamp" pattern="yyyy-MM-dd'T'HH:mm:ss"/>
+      </tstamp>
+      <echo>End run: ${end.tstamp}</echo>
+      <record action="stop" name="${log.run}"/>
+      <echo>Run log: ${log.run}</echo>
 
-    <target name="check-folder" description="Check status of folder on server" depends="init">
-        <!--
+      <!-- generate list of files on USB drive -->
+      <exec executable="/bin/bash" output="${dir.run}/diskfilelist.txt">
+         <arg value="${basedir}/diskfilelist.sh"/>
+         <arg value="${dir.source}"/>
+      </exec>
+
+      <!-- upload log file and file list -->
+      <scp file="${log.run}" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
+      <scp file="${dir.run}/diskfilelist.txt" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
+
+
+   </target>
+
+   <target name="check-folder" description="Check status of folder on server" depends="init">
+      <!--
       4) At the beginning of processing a bag, notify the HUCO server that you are beginning a bag:
       
       http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no value for bags]&path=itemname&action=want-bag
@@ -149,28 +147,27 @@
       this should return true if the bag doesn't exist (Harvey will parse the bag id from the path). 
        -->
 
-        <!-- get Watson folder name e.g. 73-191-1-234 -->
-        <basename property="foldername" file="${dir.folder}"/>
-        <!-- fetch bag state into property bag.state -->
-        <property name="url" value="filename=&amp;path=${foldername}&amp;action=UAL-want-bag"/>
-        <loadresource property="want.bag">
-            <url url="${api.uri}?${url}"/>
-        </loadresource>
-        <echo>${url} -> ${want.bag}"</echo>
-        <!-- if bag does not exist on server, want.bag is true -->
-        <condition property="do.bag">
-			<or>
-            	<equals arg1="${want.bag}" arg2="true"/>
-				<isset property="force"/>
-			</or>
-        </condition>
-        <antcall target="run-folder" inheritall="true"/>
-    </target>
+      <!-- get Watson folder name e.g. 73-191-1-234 -->
+      <basename property="foldername" file="${dir.folder}"/>
+      <!-- fetch bag state into property bag.state -->
+      <property name="url" value="filename=&amp;path=${foldername}&amp;action=UAL-want-bag"/>
+      <loadresource property="want.bag">
+         <url url="${api.uri}?${url}"/>
+      </loadresource>
+      <echo>${url} -> ${want.bag}"</echo>
+      <!-- if bag does not exist on server, want.bag is true -->
+      <condition property="do.bag">
+         <or>
+            <equals arg1="${want.bag}" arg2="true"/>
+            <isset property="force"/>
+         </or>
+      </condition>
+      <antcall target="run-folder" inheritall="true"/>
+   </target>
 
-    <target name="run-folder" description="Do a run on an individual folder" depends="init"
-        if="do.bag">
-        <!-- called by target "check-folder" -->
-        <!-- TODO DONE 2013-05-29 register folder with "starting bag" call to logging server
+   <target name="run-folder" description="Do a run on an individual folder" depends="init" if="do.bag">
+      <!-- called by target "check-folder" -->
+      <!-- TODO DONE 2013-05-29 register folder with "starting bag" call to logging server
       
       after you've got a "false", set the state like this:
 
@@ -178,55 +175,49 @@ http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=[no v
       
       -->
 
-        <property name="dir.working" value="${dir.run}/${foldername}"/>
-        <property name="dir.metadata" value="${dir.working}/metadata"/>
-        <property name="dir.output" value="${dir.working}/output"/>
-        <property name="dir.bag" value="${dir.working}/bag"/>
-        <mkdir dir="${dir.working}"/>
-        <mkdir dir="${dir.metadata}"/>
-        <mkdir dir="${dir.output}"/>
-        <mkdir dir="${dir.bag}"/>
+      <property name="dir.working" value="${dir.run}/${foldername}"/>
+      <property name="dir.metadata" value="${dir.working}/metadata"/>
+      <property name="dir.output" value="${dir.working}/output"/>
+      <property name="dir.bag" value="${dir.working}/bag"/>
+      <mkdir dir="${dir.working}"/>
+      <mkdir dir="${dir.metadata}"/>
+      <mkdir dir="${dir.output}"/>
+      <mkdir dir="${dir.bag}"/>
 
-        <!-- get full path of current folder -->
-        <property name="folderpath" location="."/>
-        <!-- note: inherits foldername -->
-        <antcall target="post">
-            <param name="filename" value=""/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-run-start"/>
-        </antcall>
-        
-        <echo>
-dir.working: ${dir.working}        
-dir.metadata: ${dir.metadata}
-dir.output: ${dir.output}
-dir.bag: ${dir.bag}
-</echo>
+      <!-- get full path of current folder -->
+      <property name="folderpath" location="."/>
+      <!-- note: inherits foldername -->
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-run-start"/>
+      </antcall>
 
-        <available property="filesrenamed" file="${folderpath}/boxnameadded"/>
+      <echo> dir.working: ${dir.working} dir.metadata: ${dir.metadata} dir.output: ${dir.output} dir.bag: ${dir.bag} </echo>
 
-        <!--<antcall target="rename" inheritall="true"/>-->
-        <antcall target="metadata" inheritall="true"/>
-        <antcall target="jhove-parse" inheritall="true"/>
-        <antcall target="bagit-create" inheritall="true"/>
-        <antcall target="upload" inheritall="true">
-            <param name="host.dir" value="${host.dir}/${foldername}"/>
-        </antcall>
+      <available property="filesrenamed" file="${folderpath}/boxnameadded"/>
 
-        <antcall target="post">
-            <param name="filename" value=""/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-run-end"/>
-        </antcall>
+      <!--<antcall target="rename" inheritall="true"/>-->
+      <antcall target="metadata" inheritall="true"/>
+      <antcall target="jhove-parse" inheritall="true"/>
+      <antcall target="bagit-create" inheritall="true"/>
+      <antcall target="upload" inheritall="true">
+         <param name="host.dir" value="${host.dir}/${foldername}"/>
+      </antcall>
 
-       <!-- <touch file="${dir.folder}/finished"/>
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-run-end"/>
+      </antcall>
+
+      <!-- <touch file="${dir.folder}/finished"/>
         <move todir="${dir.completed}" file="${dir.folder}"/>-->
 
-    </target>
+   </target>
 
-    <target name="rename" description="Rename files to include box numbers, parsed from folder name"
-        unless="filesrenamed">
-        <!-- rename files to incorporate box number
+   <target name="rename" description="Rename files to include box numbers, parsed from folder name" unless="filesrenamed">
+      <!-- rename files to incorporate box number
          e.g. folder name: 95-131-1-595 (box = 1, folder = 595)
          file: 95-131-595-001.TIF
          rename to: 95-131-1-595-001.TIF
@@ -234,439 +225,431 @@ dir.bag: ${dir.bag}
          Note: only files that match the "before" regex will be renamed, so it is safe to repeat this 
          job on previously renamed files.
          -->
-        <!-- param dir.folder inherited -->
-        <antcall target="post">
-            <param name="filename" value=""/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-boxnameadd-start"/>
-        </antcall>
+      <!-- param dir.folder inherited -->
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-boxnameadd-start"/>
+      </antcall>
 
-        <!-- TODO handle subdirs -->
-        <!-- get box number from folder name -->
-        <propertyregex property="box" input="${dir.folder}" regexp=".*\-([0-9]*)\-[0-9]*$"
-            select="\1"/>
-        <echo>Box: ${box}</echo>
-        <!-- rename any file that matches old pattern (without box number) -->
-        <fileset id="files-to-rename" dir="${dir.folder}" includes="**/*">
-            <filename regex="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"
-            />
-        </fileset>
-        <pathconvert pathsep="${line.separator}" property="files" refid="files-to-rename"/>
-        <echo>Files to rename:</echo>
-        <echo>${files}</echo>
-        <move todir="${dir.folder}">
-            <fileset refid="files-to-rename"/>
-            <regexpmapper
-                from="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"
-                to="\1\2\-\3\-${box}\-\4\-\5\.\6"/>
-        </move>
+      <!-- TODO handle subdirs -->
+      <!-- get box number from folder name -->
+      <propertyregex property="box" input="${dir.folder}" regexp=".*\-([0-9]*)\-[0-9]*$" select="\1"/>
+      <echo>Box: ${box}</echo>
+      <!-- rename any file that matches old pattern (without box number) -->
+      <fileset id="files-to-rename" dir="${dir.folder}" includes="**/*">
+         <filename regex="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"/>
+      </fileset>
+      <pathconvert pathsep="${line.separator}" property="files" refid="files-to-rename"/>
+      <echo>Files to rename:</echo>
+      <echo>${files}</echo>
+      <move todir="${dir.folder}">
+         <fileset refid="files-to-rename"/>
+         <regexpmapper from="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$" to="\1\2\-\3\-${box}\-\4\-\5\.\6"/>
+      </move>
 
-        <touch file="${dir.folder}/boxnameadded"/>
-        <antcall target="post">
-            <param name="filename" value=""/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-boxnameadd-end"/>
-        </antcall>
+      <touch file="${dir.folder}/boxnameadded"/>
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-boxnameadd-end"/>
+      </antcall>
 
-    </target>
+   </target>
 
-    <!-- JHOVE targets -->
-    <!-- prepare image metadata, using JHove -->
-    <target name="metadata" description="Create image metadata using jhove for this item" unless="skip.metadata">
-        <foreach param="tiffile" target="jhove-single" inheritall="true">
-            <path id="tif.path">
-                <fileset dir="${dir.folder}" includes="**/*.tif **/*.TIF **/*.tiff **/*.TIFF"/>
-            </path>
-        </foreach>
-    </target>
+   <!-- JHOVE targets -->
+   <!-- prepare image metadata, using JHove -->
+   <target name="metadata" description="Create image metadata using jhove for this item" unless="skip.metadata">
+      <foreach param="tiffile" target="jhove-single" inheritall="true">
+         <path id="tif.path">
+            <fileset dir="${dir.folder}" includes="**/*.tif **/*.TIF **/*.tiff **/*.TIFF"/>
+         </path>
+      </foreach>
+   </target>
 
-    <!-- utility task for metadata: this allows us to do an uptodate check, so the metadata won't be recreated if the TIFF hasn't changed -->
-    <target name="jhove-single">
-        <pathconvert dirsep="${file.separator}" property="tiff.relative.path">
-            <filelist dir="${dir.folder}">
-                <file name="${tiffile}"/>
-            </filelist>
-            <map from="${dir.folder}${file.separator}" to=""/>
-        </pathconvert>
-        <echo>${dir.folder}</echo>
-        <echo>tiffile: ${tiffile}</echo>
-        <echo>tiff.relative.path: ${tiff.relative.path}</echo>
+   <!-- utility task for metadata: this allows us to do an uptodate check, so the metadata won't be recreated if the TIFF hasn't changed -->
+   <target name="jhove-single">
+      <pathconvert dirsep="${file.separator}" property="tiff.relative.path">
+         <filelist dir="${dir.folder}">
+            <file name="${tiffile}"/>
+         </filelist>
+         <map from="${dir.folder}${file.separator}" to=""/>
+      </pathconvert>
+      <echo>${dir.folder}</echo>
+      <echo>tiffile: ${tiffile}</echo>
+      <echo>tiff.relative.path: ${tiff.relative.path}</echo>
 
-        <propertyregex property="filename" input="${tiff.relative.path}"
-            regexp="(.*)\.[tT][iI][fF][fF]?" select="\1"/>
-        <echo>filename: ${filename}</echo>
-        <uptodate property="jhove.uptodate" srcfile="${tiffile}"
-            targetfile="${dir.metadata}${file.separator}${filename}.xml"/>
-        <antcall target="jhove-single-do-it" inheritall="true"/>
-    </target>
+      <propertyregex property="filename" input="${tiff.relative.path}" regexp="(.*)\.[tT][iI][fF][fF]?" select="\1"/>
+      <echo>filename: ${filename}</echo>
+      <uptodate property="jhove.uptodate" srcfile="${tiffile}" targetfile="${dir.metadata}${file.separator}${filename}.xml"/>
+      <antcall target="jhove-single-do-it" inheritall="true"/>
+   </target>
 
-    <!-- utility task for metadata: create the metadata unless we are already uptodate -->
-    <target name="jhove-single-do-it" unless="jhove.uptodate">
-        <!-- TODO DONE 2013-05-29 hit a url on the logging server to register this file -->
-        <!--       http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=91-112-3-24.tif&path=/full/file/path/excluding/file/name&action=UAL-jhove-start -->
-        <basename file="${tiffile}" property="filename"/>
-        <antcall target="post">
-            <param name="filename" value="${filename}"/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-jhove-start"/>
-        </antcall>
-        <java jar="lib/jhoveapp.jar" fork="true">
-            <arg value="-c"/>
-            <arg value="lib/jhove.conf"/>
-            <arg value="-o"/>
-            <arg value="${dir.metadata}${file.separator}${filename}.xml"/>
-            <arg value="-h"/>
-            <arg value="xml"/>
-            <arg value="-m"/>
-            <arg value="TIFF-hul"/>
-            <!-- calculate checksums -->
-            <arg value="-k"/>
-            <arg value="${tiffile}"/>
-        </java>
-        <antcall target="post">
-            <param name="filename" value="${filename}"/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-jhove-end"/>
-        </antcall>
-    </target>
+   <!-- utility task for metadata: create the metadata unless we are already uptodate -->
+   <target name="jhove-single-do-it" unless="jhove.uptodate">
+      <!-- TODO DONE 2013-05-29 hit a url on the logging server to register this file -->
+      <!--       http://huco.artsrn.ualberta.ca/~hquamen/watson/metadata/index.php?filename=91-112-3-24.tif&path=/full/file/path/excluding/file/name&action=UAL-jhove-start -->
+      <basename file="${tiffile}" property="filename"/>
+      <antcall target="post">
+         <param name="filename" value="${filename}"/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-jhove-start"/>
+      </antcall>
+      <java jar="lib/jhoveapp.jar" fork="true">
+         <arg value="-c"/>
+         <arg value="lib/jhove.conf"/>
+         <arg value="-o"/>
+         <arg value="${dir.metadata}${file.separator}${filename}.xml"/>
+         <arg value="-h"/>
+         <arg value="xml"/>
+         <arg value="-m"/>
+         <arg value="TIFF-hul"/>
+         <!-- calculate checksums -->
+         <arg value="-k"/>
+         <arg value="${tiffile}"/>
+      </java>
+      <antcall target="post">
+         <param name="filename" value="${filename}"/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-jhove-end"/>
+      </antcall>
+   </target>
 
-    <target name="jhove-parse">
-        <available property="jhoveparsedone" file="${dir.metadata}/jhoveparsedone"/>
-        <antcall target="jhove-parse-do-it" inheritall="true"/>
-    </target>
-    <target name="jhove-parse-do-it" unless="jhoveparsedone">
-        <antcall target="post">
-            <param name="filename" value=""/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-jhoveparse-start"/>
-        </antcall>
-        <!-- note: the xquery will produce paths using the unix file separator "/", even on Windows -->
-        <java classpathref="main.classpath" classname="net.sf.saxon.Query">
-            <arg value="-q:xquery/gather.xquery"/>
-            <arg value="-o:${dir.output}/jhove-parse.xml"/>
-            <arg value="dir=${dir.metadata}"/>
-        </java>
-        <!-- get absolute path of source directory -->
-        <property name="absolute.path.source" location="${dir.folder}"/>
-        <echo>absolute.path.source: ${absolute.path.source}</echo>
-        <xslt in="${dir.output}/jhove-parse.xml" out="${dir.output}/fileset-all.txt"
-            style="xsl/make-filesets.xsl">
-            <param name="sel" expression="all"/>
-            <param name="basedir-raw" expression="${absolute.path.source}"/>
-        </xslt>
-        <xslt in="${dir.output}/jhove-parse.xml" out="${dir.output}/fileset-good.txt"
-            style="xsl/make-filesets.xsl">
-            <param name="sel" expression="good"/>
-            <param name="basedir-raw" expression="${absolute.path.source}"/>
-        </xslt>
-        <xslt in="${dir.output}/jhove-parse.xml" out="${dir.output}/fileset-bad.txt"
-            style="xsl/make-filesets.xsl" classpathref="main.classpath">
-            <!-- force use of full xalan, not xsltc, to allow use of redirect extension -->
-            <factory name="org.apache.xalan.processor.TransformerFactoryImpl"/>
-            <param name="sel" expression="bad"/>
-            <param name="basedir-raw" expression="${absolute.path.source}"/>
-            <param name="output" expression="${dir.output}"/>
-        </xslt>
-        <available file="${dir.output}/report-bad-tiff.txt" property="bad.tiff.exists"/>
-        <!-- move output files to metadata dir, so will be included in bag -->
-        <move todir="${dir.metadata}">
-        	<fileset dir="${dir.output}" includes="*"/>
-    	</move>
-		<antcall target="post">
-            <param name="filename" value=""/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-jhoveparse-end"/>
-        </antcall>
-    </target>
+   <target name="jhove-parse">
+      <available property="jhoveparsedone" file="${dir.metadata}/jhoveparsedone"/>
+      <antcall target="jhove-parse-do-it" inheritall="true"/>
+   </target>
+   <target name="jhove-parse-do-it" unless="jhoveparsedone">
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-jhoveparse-start"/>
+      </antcall>
+      <!-- note: the xquery will produce paths using the unix file separator "/", even on Windows -->
+      <java classpathref="main.classpath" classname="net.sf.saxon.Query">
+         <arg value="-q:xquery/gather.xquery"/>
+         <arg value="-o:${dir.output}/jhove-parse.xml"/>
+         <arg value="dir=${dir.metadata}"/>
+      </java>
+      <!-- get absolute path of source directory -->
+      <property name="absolute.path.source" location="${dir.folder}"/>
+      <echo>absolute.path.source: ${absolute.path.source}</echo>
+      <xslt in="${dir.output}/jhove-parse.xml" out="${dir.output}/fileset-all.txt" style="xsl/make-filesets.xsl">
+         <param name="sel" expression="all"/>
+         <param name="basedir-raw" expression="${absolute.path.source}"/>
+      </xslt>
+      <xslt in="${dir.output}/jhove-parse.xml" out="${dir.output}/fileset-good.txt" style="xsl/make-filesets.xsl">
+         <param name="sel" expression="good"/>
+         <param name="basedir-raw" expression="${absolute.path.source}"/>
+      </xslt>
+      <xslt in="${dir.output}/jhove-parse.xml" out="${dir.output}/fileset-bad.txt" style="xsl/make-filesets.xsl" classpathref="main.classpath">
+         <!-- force use of full xalan, not xsltc, to allow use of redirect extension -->
+         <factory name="org.apache.xalan.processor.TransformerFactoryImpl"/>
+         <param name="sel" expression="bad"/>
+         <param name="basedir-raw" expression="${absolute.path.source}"/>
+         <param name="output" expression="${dir.output}"/>
+      </xslt>
+      <available file="${dir.output}/report-bad-tiff.txt" property="bad.tiff.exists"/>
+      <!-- move output files to metadata dir, so will be included in bag -->
+      <move todir="${dir.metadata}">
+         <fileset dir="${dir.output}" includes="*"/>
+      </move>
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-jhoveparse-end"/>
+      </antcall>
+   </target>
 
-    <target name="move-bad-files" if="bad.tiff.exists">
-        <!-- note: bad tiffs are moved into bad-files directory within source folder -->
-        <mkdir dir="${dir.folder}/bad-files"/>
-        <loadfile property="bad.files" srcfile="${dir.output}/report-bad-tiff.txt">
-            <filterchain>
-                <linecontains>
-                    <contains value="Bad file: "/>
-                </linecontains>
-            </filterchain>
-        </loadfile>
-        <foreach list="${bad.files}" delimiter="&#x0a;" target="move-bad-files-do-it"
-            param="fileline" inheritall="true"/>
-    </target>
+   <target name="move-bad-files" if="bad.tiff.exists">
+      <!-- note: bad tiffs are moved into bad-files directory within source folder -->
+      <mkdir dir="${dir.folder}/bad-files"/>
+      <loadfile property="bad.files" srcfile="${dir.output}/report-bad-tiff.txt">
+         <filterchain>
+            <linecontains>
+               <contains value="Bad file: "/>
+            </linecontains>
+         </filterchain>
+      </loadfile>
+      <foreach list="${bad.files}" delimiter="&#x0a;" target="move-bad-files-do-it" param="fileline" inheritall="true"/>
+   </target>
 
-    <target name="move-bad-files-do-it">
-        <echo>${fileline}</echo>
-        <propertyregex property="file" input="${fileline}"
-            regexp="Bad file: (.*\.[tT][iI][fF][fF]?)" select="\1"/>
-        <move file="${dir.folder}${file.separator}${file}"
-            todir="${dir.folder}${file.separator}bad-files"/>
-        <antcall target="post">
-            <param name="filename" value="${file}"/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-badtiff"/>
-        </antcall>
-    </target>
-    <!-- bagit targets: directory level -->
+   <target name="move-bad-files-do-it">
+      <echo>${fileline}</echo>
+      <propertyregex property="file" input="${fileline}" regexp="Bad file: (.*\.[tT][iI][fF][fF]?)" select="\1"/>
+      <move file="${dir.folder}${file.separator}${file}" todir="${dir.folder}${file.separator}bad-files"/>
+      <antcall target="post">
+         <param name="filename" value="${file}"/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-badtiff"/>
+      </antcall>
+   </target>
+   <!-- bagit targets: directory level -->
 
-    <target name="bagit-create" unless="skip.bagit-create">
-        <antcall target="post">
-            <param name="filename" value=""/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-createbag-start"/>
-        </antcall>
+   <target name="bagit-create" unless="skip.bagit-create">
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-createbag-start"/>
+      </antcall>
 
-        <mkdir dir="${dir.logs}"/>
-        <delete dir="${dir.bag}"/>
-        <mkdir dir="${dir.bag}"/>
+      <mkdir dir="${dir.logs}"/>
+      <delete dir="${dir.bag}"/>
+      <mkdir dir="${dir.bag}"/>
 
-        <property name="log.bagit-create" value="${dir.logs}/${foldername}-bagit-create.log"/>
+      <property name="log.bagit-create" value="${dir.logs}/${foldername}-bagit-create.log"/>
 
-        <property name="bag.command" value="create"/>
-        <property name="bag.params" value="${dir.bag} ${dir.folder}/*"/>
-        <echo>bag params: ${bag.params}</echo>
-        <echo>dir.metadata: ${dir.metadata}</echo>
+      <property name="bag.command" value="create"/>
+      <property name="bag.params" value="${dir.bag} ${dir.folder}/*"/>
+      <echo>bag params: ${bag.params}</echo>
+      <echo>dir.metadata: ${dir.metadata}</echo>
 
-        <echo>Copying files to bag</echo>
-        <copy todir="${dir.bag}">
-            <fileset dir="${dir.folder}" includes="**/*"/>
-        </copy>
-        <echo>Moving metadata files to bag</echo>
-        <move file="${dir.metadata}" todir="${dir.bag}"/>
-        
-        <!-- remove evil .DS_Store and Thumbs.db files -->
-        <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
-        
-        <!-- bag original folder in place -->
-        <exec executable="${bagit}">
-            <arg value="--processes=${bagit.processes}"/>
-            <arg value="${dir.bag}"/>
-        </exec>
+      <echo>Copying files to bag</echo>
+      <copy todir="${dir.bag}">
+         <fileset dir="${dir.folder}" includes="**/*"/>
+      </copy>
+      <echo>Moving metadata files to bag</echo>
+      <move file="${dir.metadata}" todir="${dir.bag}"/>
 
-        <antcall target="post">
-            <param name="filename" value=""/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-createbag-end"/>
-        </antcall>
+      <!-- remove evil .DS_Store and Thumbs.db files -->
+      <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
 
-    </target>
+      <!-- bag original folder in place -->
+      <exec executable="${bagit}">
+         <arg value="--processes=${bagit.processes}"/>
+         <arg value="${dir.bag}"/>
+      </exec>
 
-    <target name="bagit-verify">
-        <antcall target="post">
-            <param name="filename" value=""/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-verifybag-start"/>
-        </antcall>
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-createbag-end"/>
+      </antcall>
 
-        <mkdir dir="${dir.logs}"/>
-        <property name="log.bagit-verify" value="${dir.logs}/bagit-verify.log"/>
-        <echo>Logfile: ${log.bagit-verify}</echo>
+   </target>
 
-        <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
-        <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher"
-            maxmemory="512m" fork="true" failonerror="true" inputstring=""
-            output="${log.bagit-verify}">
-            <jvmarg value="-Dclassworlds.conf=config/bag.classworlds.conf"/>
-            <jvmarg value="-Dapp.home=."/>
-            <arg value="verifyvalid"/>
-            <arg value="${dir.bag}"/>
-            <arg value="--noresultfile"/>
-            <arg value="--log-verbose"/>
-            <arg value="--verbose"/>
-        </java>
+   <target name="bagit-verify">
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-verifybag-start"/>
+      </antcall>
+
+      <mkdir dir="${dir.logs}"/>
+      <property name="log.bagit-verify" value="${dir.logs}/bagit-verify.log"/>
+      <echo>Logfile: ${log.bagit-verify}</echo>
+
+      <!-- note: attribute "inputstring=''" is necessary, otherwise it will hang waiting for input when running in background -->
+      <java classpath="./lib/classworlds-1.1.jar" classname="org.codehaus.classworlds.Launcher" maxmemory="512m" fork="true" failonerror="true"
+         inputstring="" output="${log.bagit-verify}">
+         <jvmarg value="-Dclassworlds.conf=config/bag.classworlds.conf"/>
+         <jvmarg value="-Dapp.home=."/>
+         <arg value="verifyvalid"/>
+         <arg value="${dir.bag}"/>
+         <arg value="--noresultfile"/>
+         <arg value="--log-verbose"/>
+         <arg value="--verbose"/>
+      </java>
 
 
-        <!-- bagit code doesn't put line breaks between file reports in output -->
-        <!-- TODO test whether this is still necessary; create faulty test bags for automated testing -->
-        <!--     <replace file="${logfile}" token="Fixity failure" value="&#x0a;Fixity failure"/>
+      <!-- bagit code doesn't put line breaks between file reports in output -->
+      <!-- TODO test whether this is still necessary; create faulty test bags for automated testing -->
+      <!--     <replace file="${logfile}" token="Fixity failure" value="&#x0a;Fixity failure"/>
       <replace file="${logfile}" token=" File data/" value="&#x0a;File data/"/>
       <replace file="${logfile}" token=" Bag has file" value="&#x0a;Bag has file"/>
       <replace file="${logfile}" token=" File missing" value="&#x0a;File missing"/>-->
-        <antcall target="post">
-            <param name="filename" value=""/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-verifybag-end"/>
-        </antcall>
-    </target>
+      <antcall target="post">
+         <param name="filename" value=""/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-verifybag-end"/>
+      </antcall>
+   </target>
 
 
-    <!-- scp target -->
+   <!-- scp target -->
 
-    <target name="upload" description="Upload bag to CWRC server" unless="skip.upload">
-        <property name="bagname" value="bag-${foldername}_${today.tstamp}.tar.gz"/>
-        <antcall target="post">
-            <param name="filename" value="${bagname}"/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-uploadbag-start"/>
-        </antcall>
-        <echo>UPloading ${bagname} to ${host.dir}</echo>
-        <!-- remove .DS_Store and Thumbs.db files, in case you've inspected the bag in Finder or Windows Explorer; 
+   <target name="upload" description="Upload bag to CWRC server" unless="skip.upload">
+      <property name="bagname" value="bag-${foldername}_${today.tstamp}.tar.gz"/>
+      <antcall target="post">
+         <param name="filename" value="${bagname}"/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-uploadbag-start"/>
+      </antcall>
+      <echo>UPloading ${bagname} to ${host.dir}</echo>
+      <!-- remove .DS_Store and Thumbs.db files, in case you've inspected the bag in Finder or Windows Explorer; 
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
-        <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
-        <!-- check whether tarball exists and is up to date: if so, use it -->
-        <uptodate property="tarball.uptodate" targetfile="${dir.working}/${bagname}">
-            <srcfiles dir="${dir.bag}" includes="**/*"/>
-        </uptodate>
-        <antcall target="make-tarball" inheritall="true"/>
-        <delete dir="${dir.bag}"/>
-        
-        <!-- create directory on CWRC server -->
-        <sshexec host="${host.name}" username="${host.user}" trust="true"
-            password="${host.password}" command="mkdir -p ${host.dir}"/>
+      <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
+      <!-- check whether tarball exists and is up to date: if so, use it -->
+      <uptodate property="tarball.uptodate" targetfile="${dir.working}/${bagname}">
+         <srcfiles dir="${dir.bag}" includes="**/*"/>
+      </uptodate>
+      <antcall target="make-tarball" inheritall="true"/>
+      <if>
+         <equals arg1="${cleanup}" arg2="true"/>
+         <then>
+            <echo>Deleting bag</echo>
+            <delete dir="${dir.bag}"/>
+         </then>
+      </if>
 
-        <!-- split tarball into chunks -->
-        <echo>Split bag tarball</echo>
-        <exec dir="${dir.working}" executable="${split}">
-            <arg line=" -b2000m ${bagname} split_${bagname}"/> 
-        </exec>
-        <delete file="${dir.working}/${bagname}"/>
-        
-        <!-- upload chunks with rsync -->
-        <echo>Create upload script ${dir.working}/upload.sh</echo>
-        <echo file="${dir.working}/upload.sh">#!/bin/bash
-${rsync} -e ssh -av --password-file=~/.ssh/id_rsa \
+      <!-- create directory on CWRC server -->
+      <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="mkdir -p ${host.dir}"/>
+
+      <!-- split tarball into chunks -->
+      <echo>Split bag tarball</echo>
+      <exec dir="${dir.working}" executable="${split}">
+         <arg line=" -b2000m ${bagname} split_${bagname}"/>
+      </exec>
+
+      <if>
+         <equals arg1="${cleanup}" arg2="true"/>
+         <then>
+            <echo>Deleting tar</echo>
+            <delete file="${dir.working}/${bagname}"/>
+         </then>
+      </if>
+
+      <!-- upload chunks with rsync -->
+      <echo>Create upload script ${dir.working}/upload.sh</echo>
+      <echo file="${dir.working}/upload.sh" xml:space="preserve">#!/bin/bash ${rsync} -e ssh -av --password-file=~/.ssh/id_rsa \
 split_* \
-${host.user}@${host.name}:${host.dir}
-rm split_*
-        </echo>
-        <!-- set permissions -->
-        <chmod file="${dir.working}/upload.sh" perm="u+rx"/>
-        <!-- execute -->
-        <echo>Run upload script</echo>
-        <exec dir="${dir.working}" executable="${bash}">
-            <arg line="./upload.sh"/>
-        </exec>
-        <echo>Finished uploading</echo>
-        <!--
+${host.user}@${host.name}:${host.dir} 
+</echo>
+      <!-- set permissions -->
+      <chmod file="${dir.working}/upload.sh" perm="u+rx"/>
+      <!-- execute -->
+      <echo>Run upload script</echo>
+      <exec dir="${dir.working}" executable="${bash}">
+         <arg line="./upload.sh"/>
+      </exec>
+      <if>
+         <equals arg1="${cleanup}" arg2="true"/>
+         <then>
+            <echo>Deleting chunks</echo>
+            <delete dir="${dir.working}">
+               <include name="split_*"/>
+            </delete>
+         </then>
+      </if>
+      <echo>Finished uploading</echo>
+      <!--
         <foreach target="upload-file" param="filename" inheritall="true">
             <fileset dir="${dir.working}" includes="split_*"/>
         </foreach>
         -->
-        
 
-        <antcall target="post">
-            <param name="filename" value="${bagname}"/>
-            <param name="path" value="${foldername}"/>
-            <param name="action" value="UAL-uploadbag-end"/>
-        </antcall>
 
-    </target>
-    
-    <target name="upload-file">
-		<echo>Uploading ${filename} to ${host.dir}</echo>
-        <retry >
-            <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true"
-                failonerror="true" file="${filename}"/>
-        </retry>
-    </target>
+      <antcall target="post">
+         <param name="filename" value="${bagname}"/>
+         <param name="path" value="${foldername}"/>
+         <param name="action" value="UAL-uploadbag-end"/>
+      </antcall>
 
-    <target name="make-tarball" unless="tarball.uptodate">
-        <tar basedir="${dir.bag}" destfile="${dir.working}/${bagname}" compression="gzip" includes="**/*"/>
-    </target>
+   </target>
 
-    <target name="final-tiff-validation" depends="metadata">
-        <!-- load the existing fileset from fileset-good for the tiffs that are validated by JHOVE and should have been uploaded at this point. 
+   <target name="upload-file">
+      <echo>Uploading ${filename} to ${host.dir}</echo>
+      <retry>
+         <scp todir="${host.user}:${host.password}@${host.name}:${host.dir}" trust="true" failonerror="true" file="${filename}"/>
+      </retry>
+   </target>
+
+   <target name="make-tarball" unless="tarball.uptodate">
+      <tar basedir="${dir.bag}" destfile="${dir.working}/${bagname}" compression="gzip" includes="**/*"/>
+   </target>
+
+   <target name="final-tiff-validation" depends="metadata">
+      <!-- load the existing fileset from fileset-good for the tiffs that are validated by JHOVE and should have been uploaded at this point. 
          Uses a javascript selector to check each file with its corresponding URL. Delete the files when the url exists. 
          Generate reports of files that are validated and not validated  -->
-        <antcall target="jhove-parse" inheritall="yes"/>
+      <antcall target="jhove-parse" inheritall="yes"/>
 
-        <property name="inputfile" value="output/fileset-good.txt"/>
-        <fileset dir="${dir.folder}" includesfile="${inputfile}" id="tiffs.validated">
-            <selector refid="tiff.url.exists.selector"/>
-        </fileset>
-        <pathconvert pathsep="${line.separator}" property="list.tiffs.validated"
-            refid="tiffs.validated">
-            <map from="${basedir}${file.separator}${dir.folder}${file.separator}" to=""/>
-        </pathconvert>
-        <echo file="output/fileset-validatedtiffs.txt" append="false">${list.tiffs.validated}</echo>
-        <echo>delete fileset ${list.tiffs.validated}</echo>
-        <antcall target="delete-tiff" inheritall="yes"/>
-        <fileset dir="${dir.folder}" excludesfile="output/fileset-validatedtiffs.txt"
-            includesfile="${inputfile}" id="tiffs.not.validated"/>
+      <property name="inputfile" value="output/fileset-good.txt"/>
+      <fileset dir="${dir.folder}" includesfile="${inputfile}" id="tiffs.validated">
+         <selector refid="tiff.url.exists.selector"/>
+      </fileset>
+      <pathconvert pathsep="${line.separator}" property="list.tiffs.validated" refid="tiffs.validated">
+         <map from="${basedir}${file.separator}${dir.folder}${file.separator}" to=""/>
+      </pathconvert>
+      <echo file="output/fileset-validatedtiffs.txt" append="false">${list.tiffs.validated}</echo>
+      <echo>delete fileset ${list.tiffs.validated}</echo>
+      <antcall target="delete-tiff" inheritall="yes"/>
+      <fileset dir="${dir.folder}" excludesfile="output/fileset-validatedtiffs.txt" includesfile="${inputfile}" id="tiffs.not.validated"/>
 
-        <pathconvert pathsep="${line.separator}" property="list.tiffs.not.validated"
-            refid="tiffs.not.validated"> </pathconvert>
-        <echo>issues with following files ${list.tiffs.not.validated}</echo>
-        <echo file="output/report-not-validated-tiff.txt" append="false"
-            >${list.tiffs.not.validated}</echo>
-    </target>
+      <pathconvert pathsep="${line.separator}" property="list.tiffs.not.validated" refid="tiffs.not.validated"> </pathconvert>
+      <echo>issues with following files ${list.tiffs.not.validated}</echo>
+      <echo file="output/report-not-validated-tiff.txt" append="false">${list.tiffs.not.validated}</echo>
+   </target>
 
-    <target name="delete-tiff" unless="dry.run">
-        <delete>
-            <fileset refid="tiffs.validated"/>
-        </delete>
-    </target>
+   <target name="delete-tiff" unless="dry.run">
+      <delete>
+         <fileset refid="tiffs.validated"/>
+      </delete>
+   </target>
 
-    <!-- Convert Jhove Metadata to METS -->
-    <target name="jhove-premis" depends="metadata">
-        <!--<mkdir dir="${dir.premis}"/>
+   <!-- Convert Jhove Metadata to METS -->
+   <target name="jhove-premis" depends="metadata">
+      <!--<mkdir dir="${dir.premis}"/>
       <mkdir dir="${dir.premis}/temp"/>-->
 
-        <foreach param="jhovemetadata" target="premis-copy">
+      <foreach param="jhovemetadata" target="premis-copy">
 
-            <path id="jhove.metadata.path">
-                <fileset dir="${dir.metadata}" includes="**/*.xml"/>
-            </path>
+         <path id="jhove.metadata.path">
+            <fileset dir="${dir.metadata}" includes="**/*.xml"/>
+         </path>
 
-        </foreach>
-
-
-    </target>
-
-    <target name="premis-copy">
-        <propertyregex property="filename" input="${jhovemetadata}"
-            regexp="${dir.metadata}\${file.separator}(.*\.xml)" select="\1"/>
-        <copy file="template/premis-template.xml" tofile="${dir.premis}/${filename}" overwrite="yes"/>
-        <xmltask source="${dir.metadata}/${filename}">
-            <copy path="//*[local-name()='repInfo']/@uri" property="uri" attrValue="true"/>
-            <copy
-                path="//*[local-name()='values'][contains(@type, 'NISOImageMetadata')]/*[local-name()='value']/*[local-name()='mix']"
-                buffer="mix"/>
-            <copy path="//*[local-name()='checksum'][contains(@type,'MD5')]/text()" buffer="md5"/>
-            <copy path="//*[local-name()='checksum'][contains(@type,'SHA-1')]/text()" buffer="sha1"/>
-            <copy path="//*[local-name()='size']/text()" buffer="size"/>
-            <copy path="//*[local-name()='format']/text()" property="format"/>
-            <copy path="//*[local-name()='status']/text()" property="status"/>
-            <copy path="//*[local-name()='lastModified']/text()" property="date"/>
-            <copy path="/*[local-name()='jhove']/@name" property="tool" attrValue="true"/>
-            <copy path="/*[local-name()='jhove']/@release" property="version" attrValue="true"/>
-
-        </xmltask>
-
-        <condition property="set.tiff">
-
-            <equals arg1="${format}" arg2="TIFF"/>
-        </condition>
+      </foreach>
 
 
-        <xmltask source="${dir.premis}/${filename}" dest="${dir.premis}/${filename}">
-            <insert
-                path="//*[local-name()='jhove'][contains(@*[local-name()='type'], 'file')]/*[local-name()='objectIdentifier']">
-                <![CDATA[
+   </target>
+
+   <target name="premis-copy">
+      <propertyregex property="filename" input="${jhovemetadata}" regexp="${dir.metadata}\${file.separator}(.*\.xml)" select="\1"/>
+      <copy file="template/premis-template.xml" tofile="${dir.premis}/${filename}" overwrite="yes"/>
+      <xmltask source="${dir.metadata}/${filename}">
+         <copy path="//*[local-name()='repInfo']/@uri" property="uri" attrValue="true"/>
+         <copy path="//*[local-name()='values'][contains(@type, 'NISOImageMetadata')]/*[local-name()='value']/*[local-name()='mix']" buffer="mix"/>
+         <copy path="//*[local-name()='checksum'][contains(@type,'MD5')]/text()" buffer="md5"/>
+         <copy path="//*[local-name()='checksum'][contains(@type,'SHA-1')]/text()" buffer="sha1"/>
+         <copy path="//*[local-name()='size']/text()" buffer="size"/>
+         <copy path="//*[local-name()='format']/text()" property="format"/>
+         <copy path="//*[local-name()='status']/text()" property="status"/>
+         <copy path="//*[local-name()='lastModified']/text()" property="date"/>
+         <copy path="/*[local-name()='jhove']/@name" property="tool" attrValue="true"/>
+         <copy path="/*[local-name()='jhove']/@release" property="version" attrValue="true"/>
+
+      </xmltask>
+
+      <condition property="set.tiff">
+
+         <equals arg1="${format}" arg2="TIFF"/>
+      </condition>
+
+
+      <xmltask source="${dir.premis}/${filename}" dest="${dir.premis}/${filename}">
+         <insert path="//*[local-name()='jhove'][contains(@*[local-name()='type'], 'file')]/*[local-name()='objectIdentifier']">
+            <![CDATA[
                 <objectIdentifierType>URI</objectIdentifierType>
                 <objectIdentifierValue>${uri}</objectIdentifierValue>
                 ]]>
-            </insert>
+         </insert>
 
-            <insert
-                path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]/*[local-name()='objectCharacteristics']/*[local-name()='objectCharacteristicsExtension']"
-                buffer="mix"/>
-            <insert
-                path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='MD5']/*[local-name()='messageDigest']"
-                buffer="md5"/>
-            <insert
-                path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='SHA-1']/*[local-name()='messageDigest']"
-                buffer="sha1"/>
-            <replace
-                path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='MD5']/*[local-name()='messageDigestOriginator']/text()"
-                withText="Jhove"/>
-            <replace
-                path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='SHA-1']/*[local-name()='messageDigestOriginator']/text()"
-                withText="Jhove"/>
-            <insert path="//*[local-name()='size']" buffer="size"/>
-            <insert
-                path="//*[local-name()='object'][contains(@*[local-name()='type'], 'file')]/*[local-name()='objectCharacteristics']/*[local-name()='format']"
-                if="set.tiff">
-                <![CDATA[ 
+         <insert
+            path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]/*[local-name()='objectCharacteristics']/*[local-name()='objectCharacteristicsExtension']"
+            buffer="mix"/>
+         <insert path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='MD5']/*[local-name()='messageDigest']" buffer="md5"/>
+         <insert path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='SHA-1']/*[local-name()='messageDigest']" buffer="sha1"/>
+         <replace path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='MD5']/*[local-name()='messageDigestOriginator']/text()"
+            withText="Jhove"/>
+         <replace
+            path="//*[local-name()='fixity'][*[local-name()='messageDigestAlgorithm'] ='SHA-1']/*[local-name()='messageDigestOriginator']/text()"
+            withText="Jhove"/>
+         <insert path="//*[local-name()='size']" buffer="size"/>
+         <insert
+            path="//*[local-name()='object'][contains(@*[local-name()='type'], 'file')]/*[local-name()='objectCharacteristics']/*[local-name()='format']"
+            if="set.tiff">
+            <![CDATA[ 
                 <formatDesignation>
                <formatName>Tagged Image File Format</formatName>
                </formatDesignation>
@@ -675,13 +658,11 @@ rm split_*
                <formatRegistryKey>fmt/353</formatRegistryKey>
                </formatRegistry>
                ]]>
-            </insert>
-            <copy path="count(//*[local-name()='event'])" property="event_id"/>
+         </insert>
+         <copy path="count(//*[local-name()='event'])" property="event_id"/>
 
-            <insert
-                path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]"
-                position="after">
-                <![CDATA[ 
+         <insert path="//*[local-name()='object'][contains(@*[local-name()='type'], 'bitstream')]" position="after">
+            <![CDATA[ 
                 <event>
                     <eventIdentifier>
                         <eventIdentifierType />
@@ -700,226 +681,214 @@ rm split_*
                     
                   </event>
                ]]>
-            </insert>
+         </insert>
 
-            <attr path="//*[local-name()='event']" attr="xmlns" remove="true"/>
-        </xmltask>
+         <attr path="//*[local-name()='event']" attr="xmlns" remove="true"/>
+      </xmltask>
 
 
-    </target>
+   </target>
 
-    <target name="post">
-        <!-- get timestamp -->
-        <tstamp>
-            <format property="NOW" pattern="yyyy-MM-dd HH:mm:ss"/>
-        </tstamp>
-        <!-- do http post with ${filename}, ${path} and ${action} -->
-        <post to="${api.uri}" verbose="${post.verbose}">
-            <prop name="filename" value="${filename}"/>
-            <prop name="path" value="${path}"/>
-            <prop name="action" value="${action}"/>
-        </post>
-        <echo>${NOW} Posted filename=${filename}&amp;path=${path}&amp;action=${action}</echo>
-    </target>
+   <target name="post">
+      <!-- get timestamp -->
+      <tstamp>
+         <format property="NOW" pattern="yyyy-MM-dd HH:mm:ss"/>
+      </tstamp>
+      <!-- do http post with ${filename}, ${path} and ${action} -->
+      <post to="${api.uri}" verbose="${post.verbose}">
+         <prop name="filename" value="${filename}"/>
+         <prop name="path" value="${path}"/>
+         <prop name="action" value="${action}"/>
+      </post>
+      <echo>${NOW} Posted filename=${filename}&amp;path=${path}&amp;action=${action}</echo>
+   </target>
 
-    <target name="testboxrename">
-        <property name="box" value="box"/>
-        <fileset id="testboxrename" dir="testboxrename" includes="**/*">
-            <filename regex="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"/>
-        </fileset>
-        <pathconvert pathsep="${line.separator}" property="files" refid="testboxrename"/>
-        <echo>${files}</echo>
-        <move todir="testboxrename">
-            <fileset refid="testboxrename"/>
-            <regexpmapper from="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"
-                to="\1\2\-\3\-${box}\-\4\-\5\.\6"/>
-        </move>
-        
-        
-    </target>
-    
-    <!-- Tests -->
-    <target name="setUp">
-        <!-- preparation: delete jhove output files from previous run -->
-        <echo>Set Up</echo>
-        <property file="test.properties"/>
-        <mkdir dir="${dir.output}"/>
-        <mkdir dir="${dir.metadata}"/>
-        <delete>
-            <fileset dir="${dir.metadata}" includes="*.xml"/>
-            <fileset dir="${dir.output}" includes="**/*"/>
-        </delete>
-        <delete dir="${dir.output}/bag-create"/>
-    </target>
+   <target name="testboxrename">
+      <property name="box" value="box"/>
+      <fileset id="testboxrename" dir="testboxrename" includes="**/*">
+         <filename regex="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"/>
+      </fileset>
+      <pathconvert pathsep="${line.separator}" property="files" refid="testboxrename"/>
+      <echo>${files}</echo>
+      <move todir="testboxrename">
+         <fileset refid="testboxrename"/>
+         <regexpmapper from="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$" to="\1\2\-\3\-${box}\-\4\-\5\.\6"/>
+      </move>
 
-    <target name="antunit" xmlns:au="antlib:org.apache.ant.antunit">
 
-        <au:antunit>
-            <fileset file="${ant.file}"/>
-            <au:plainlistener/>
-        </au:antunit>
-    </target>
+   </target>
 
-    <!-- test properties -->
-    <target name="test_properties">
-        <au:assertPropertySet name="dir.folder"/>
-        <au:assertPropertySet name="dir.metadata"/>
-        <au:assertPropertySet name="dir.logs"/>
-        <au:assertPropertySet name="dir.bag"/>
-    </target>
+   <!-- Tests -->
+   <target name="setUp">
+      <!-- preparation: delete jhove output files from previous run -->
+      <echo>Set Up</echo>
+      <property file="test.properties"/>
+      <mkdir dir="${dir.output}"/>
+      <mkdir dir="${dir.metadata}"/>
+      <delete>
+         <fileset dir="${dir.metadata}" includes="*.xml"/>
+         <fileset dir="${dir.output}" includes="**/*"/>
+      </delete>
+      <delete dir="${dir.output}/bag-create"/>
+   </target>
 
-    <!-- test jhove output -->
-    <target name="test_metadata" depends="metadata">
-        <!-- run metadata target, then test the output xml files -->
+   <target name="antunit" xmlns:au="antlib:org.apache.ant.antunit">
 
-        <!-- make sure jhove output files exist -->
-        <au:assertFileExists file="${dir.metadata}/box1/good.xml"/>
-        <au:assertFileExists file="${dir.metadata}/box1/nontiff.xml"/>
-        <au:assertFileExists file="${dir.metadata}/box1/truncatedtiff.xml"/>
+      <au:antunit>
+         <fileset file="${ant.file}"/>
+         <au:plainlistener/>
+      </au:antunit>
+   </target>
 
-        <!-- test status and message elements -->
-        <!-- note: xmlproperty ignores namespaces -->
-        <xmlproperty prefix="good" file="${dir.metadata}/box1/good.xml"/>
-        <au:assertPropertyEquals name="good.jhove.repInfo.status" value="Well-Formed and valid"/>
+   <!-- test properties -->
+   <target name="test_properties">
+      <au:assertPropertySet name="dir.folder"/>
+      <au:assertPropertySet name="dir.metadata"/>
+      <au:assertPropertySet name="dir.logs"/>
+      <au:assertPropertySet name="dir.bag"/>
+   </target>
 
-        <xmlproperty prefix="nontiff" file="${dir.metadata}/box1/nontiff.xml"/>
-        <au:assertPropertyEquals name="nontiff.jhove.repInfo.status" value="Not well-formed"/>
-        <au:assertPropertyEquals name="nontiff.jhove.repInfo.messages.message"
-            value="No TIFF header: &lt;?"/>
+   <!-- test jhove output -->
+   <target name="test_metadata" depends="metadata">
+      <!-- run metadata target, then test the output xml files -->
 
-        <xmlproperty prefix="truncatedtiff" file="${dir.metadata}/box1/truncatedtiff.xml"/>
-        <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.status" value="Not well-formed"/>
-        <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.messages.message"
-            value="Premature EOF"/>
-    </target>
+      <!-- make sure jhove output files exist -->
+      <au:assertFileExists file="${dir.metadata}/box1/good.xml"/>
+      <au:assertFileExists file="${dir.metadata}/box1/nontiff.xml"/>
+      <au:assertFileExists file="${dir.metadata}/box1/truncatedtiff.xml"/>
 
-    <target name="test_jhove-parse" depends="metadata,jhove-parse">
-        <fileset dir="${dir.folder}" includesfile="${dir.output}/fileset-all.txt" id="tiffs-all"/>
-        <fileset dir="${dir.folder}" includesfile="${dir.output}/fileset-good.txt" id="tiffs-good"/>
-        <fileset dir="${dir.folder}" includesfile="${dir.output}/fileset-bad.txt" id="tiffs-bad"/>
+      <!-- test status and message elements -->
+      <!-- note: xmlproperty ignores namespaces -->
+      <xmlproperty prefix="good" file="${dir.metadata}/box1/good.xml"/>
+      <au:assertPropertyEquals name="good.jhove.repInfo.status" value="Well-Formed and valid"/>
 
-        <resourcecount property="count-all" refid="tiffs-all"/>
-        <resourcecount property="count-good" refid="tiffs-good"/>
-        <resourcecount property="count-bad" refid="tiffs-bad"/>
+      <xmlproperty prefix="nontiff" file="${dir.metadata}/box1/nontiff.xml"/>
+      <au:assertPropertyEquals name="nontiff.jhove.repInfo.status" value="Not well-formed"/>
+      <au:assertPropertyEquals name="nontiff.jhove.repInfo.messages.message" value="No TIFF header: &lt;?"/>
 
-        <au:assertPropertyEquals name="count-all" value="4"/>
-        <au:assertPropertyEquals name="count-good" value="2"/>
-        <au:assertPropertyEquals name="count-bad" value="2"/>
+      <xmlproperty prefix="truncatedtiff" file="${dir.metadata}/box1/truncatedtiff.xml"/>
+      <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.status" value="Not well-formed"/>
+      <au:assertPropertyEquals name="truncatedtiff.jhove.repInfo.messages.message" value="Premature EOF"/>
+   </target>
 
-        <!-- normalize line endings to unix, to match expected file -->
-        <fixcrlf file="${dir.output}/report-bad-tiff.txt" eol="unix"/>
-        <au:assertFilesMatch actual="${dir.output}/report-bad-tiff.txt"
-            expected="tests/jhove-parse/report-bad-tiff.txt"/>
+   <target name="test_jhove-parse" depends="metadata,jhove-parse">
+      <fileset dir="${dir.folder}" includesfile="${dir.output}/fileset-all.txt" id="tiffs-all"/>
+      <fileset dir="${dir.folder}" includesfile="${dir.output}/fileset-good.txt" id="tiffs-good"/>
+      <fileset dir="${dir.folder}" includesfile="${dir.output}/fileset-bad.txt" id="tiffs-bad"/>
 
-    </target>
+      <resourcecount property="count-all" refid="tiffs-all"/>
+      <resourcecount property="count-good" refid="tiffs-good"/>
+      <resourcecount property="count-bad" refid="tiffs-bad"/>
 
-    <target name="test_bagit-verify-good">
-        <antcall target="bagit-verify" inheritall="yes">
-            <param name="dir.bag" value="tests/bag-good"/>
-        </antcall>
-    </target>
+      <au:assertPropertyEquals name="count-all" value="4"/>
+      <au:assertPropertyEquals name="count-good" value="2"/>
+      <au:assertPropertyEquals name="count-bad" value="2"/>
 
-    <target name="test_bagit-verify-extrafile">
-        <au:expectfailure>
-            <antcall target="bagit-verify" inheritall="yes">
-                <param name="dir.bag" value="tests/bag-extrafile"/>
-            </antcall>
-        </au:expectfailure>
-        <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
-        <au:assertPropertyContains name="log"
-            value="Payload file data/extrafile.txt not found in any payload manifest."/>
-    </target>
+      <!-- normalize line endings to unix, to match expected file -->
+      <fixcrlf file="${dir.output}/report-bad-tiff.txt" eol="unix"/>
+      <au:assertFilesMatch actual="${dir.output}/report-bad-tiff.txt" expected="tests/jhove-parse/report-bad-tiff.txt"/>
 
-    <target name="test_bagit-verify-missingfile">
-        <au:expectfailure>
-            <antcall target="bagit-verify" inheritall="yes">
-                <param name="dir.bag" value="tests/bag-missingfile"/>
-            </antcall>
-        </au:expectfailure>
-        <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
-        <au:assertPropertyContains name="log"
-            value="Payload manifest manifest-md5.txt contains missing file(s): [data/test1.txt]"/>
-    </target>
+   </target>
 
-    <target name="test_bagit-verify-fixity">
-        <au:expectfailure>
-            <antcall target="bagit-verify" inheritall="yes">
-                <param name="dir.bag" value="tests/bag-fixity"/>
-            </antcall>
-        </au:expectfailure>
-        <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
-        <au:assertPropertyContains name="log"
-            value="Payload manifest manifest-md5.txt contains invalid file(s): [data/test1.txt]"/>
-    </target>
+   <target name="test_bagit-verify-good">
+      <antcall target="bagit-verify" inheritall="yes">
+         <param name="dir.bag" value="tests/bag-good"/>
+      </antcall>
+   </target>
 
-    <target name="test_bagit-verify-tagfixity">
-        <au:expectfailure>
-            <antcall target="bagit-verify" inheritall="yes">
-                <param name="dir.bag" value="tests/bag-tagfixity"/>
-            </antcall>
-        </au:expectfailure>
-        <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
-        <au:assertPropertyContains name="log"
-            value="Tag manifest tagmanifest-md5.txt contains invalid files: [bag-info.txt]"/>
-    </target>
+   <target name="test_bagit-verify-extrafile">
+      <au:expectfailure>
+         <antcall target="bagit-verify" inheritall="yes">
+            <param name="dir.bag" value="tests/bag-extrafile"/>
+         </antcall>
+      </au:expectfailure>
+      <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
+      <au:assertPropertyContains name="log" value="Payload file data/extrafile.txt not found in any payload manifest."/>
+   </target>
 
-    <target name="test_bagit-create">
-        <antcall target="bagit-create" inheritall="yes">
-            <param name="dir.bag" value="${dir.output}/bag-create"/>
-            <param name="dir.folder" value="tests/data"/>
-            <param name="dir.metadata" value="tests/data"/>
-        </antcall>
-        <antcall target="bagit-verify" inheritall="yes">
-            <param name="dir.bag" value="${dir.output}/bag-create"/>
-        </antcall>
-        <au:assertFilesMatch actual="${dir.output}/bag-create/manifest-md5.txt"
-            expected="tests/bag-create/manifest-md5.txt"/>
-    </target>
+   <target name="test_bagit-verify-missingfile">
+      <au:expectfailure>
+         <antcall target="bagit-verify" inheritall="yes">
+            <param name="dir.bag" value="tests/bag-missingfile"/>
+         </antcall>
+      </au:expectfailure>
+      <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
+      <au:assertPropertyContains name="log" value="Payload manifest manifest-md5.txt contains missing file(s): [data/test1.txt]"/>
+   </target>
 
-    <target name="test_upload">
-        <antcall target="bagit-create" inheritall="yes">
-            <param name="dir.bag" value="${dir.output}/bag-create"/>
-            <param name="dir.folder" value="tests/data"/>
-            <param name="dir.metadata" value="tests/data"/>
-        </antcall>
-        <antcall target="bagit-verify" inheritall="yes">
-            <param name="dir.bag" value="${dir.output}/bag-create"/>
-        </antcall>
-        <sshexec host="${host.name}" username="${host.user}" trust="true"
-            password="${host.password}" command="rm -rf ${host.dir}/test_upload"/>
-        <antcall target="upload" inheritall="yes">
+   <target name="test_bagit-verify-fixity">
+      <au:expectfailure>
+         <antcall target="bagit-verify" inheritall="yes">
+            <param name="dir.bag" value="tests/bag-fixity"/>
+         </antcall>
+      </au:expectfailure>
+      <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
+      <au:assertPropertyContains name="log" value="Payload manifest manifest-md5.txt contains invalid file(s): [data/test1.txt]"/>
+   </target>
+
+   <target name="test_bagit-verify-tagfixity">
+      <au:expectfailure>
+         <antcall target="bagit-verify" inheritall="yes">
+            <param name="dir.bag" value="tests/bag-tagfixity"/>
+         </antcall>
+      </au:expectfailure>
+      <loadfile property="log" srcfile="${dir.logs}/bagit-verify.log"/>
+      <au:assertPropertyContains name="log" value="Tag manifest tagmanifest-md5.txt contains invalid files: [bag-info.txt]"/>
+   </target>
+
+   <target name="test_bagit-create">
+      <antcall target="bagit-create" inheritall="yes">
+         <param name="dir.bag" value="${dir.output}/bag-create"/>
+         <param name="dir.folder" value="tests/data"/>
+         <param name="dir.metadata" value="tests/data"/>
+      </antcall>
+      <antcall target="bagit-verify" inheritall="yes">
+         <param name="dir.bag" value="${dir.output}/bag-create"/>
+      </antcall>
+      <au:assertFilesMatch actual="${dir.output}/bag-create/manifest-md5.txt" expected="tests/bag-create/manifest-md5.txt"/>
+   </target>
+
+   <target name="test_upload">
+      <antcall target="bagit-create" inheritall="yes">
+         <param name="dir.bag" value="${dir.output}/bag-create"/>
+         <param name="dir.folder" value="tests/data"/>
+         <param name="dir.metadata" value="tests/data"/>
+      </antcall>
+      <antcall target="bagit-verify" inheritall="yes">
+         <param name="dir.bag" value="${dir.output}/bag-create"/>
+      </antcall>
+      <sshexec host="${host.name}" username="${host.user}" trust="true" password="${host.password}" command="rm -rf ${host.dir}/test_upload"/>
+      <antcall target="upload" inheritall="yes">
+         <param name="host.dir" value="${host.dir}/test_upload"/>
+         <param name="dir.bag" value="${dir.output}/bag-create"/>
+      </antcall>
+      <au:expectfailure>
+         <antcall target="upload" inheritall="yes">
+            <param name="host.password" value="nope"/>
             <param name="host.dir" value="${host.dir}/test_upload"/>
-            <param name="dir.bag" value="${dir.output}/bag-create"/>
-        </antcall>
-        <au:expectfailure>
-            <antcall target="upload" inheritall="yes">
-                <param name="host.password" value="nope"/>
-                <param name="host.dir" value="${host.dir}/test_upload"/>
-            </antcall>
-        </au:expectfailure>
-    </target>
+         </antcall>
+      </au:expectfailure>
+   </target>
 
-    <target name="test-final-validation-matching-url" depends="metadata, jhove-parse">
+   <target name="test-final-validation-matching-url" depends="metadata, jhove-parse">
 
-        <antcall target="final-tiff-validation" inheritall="yes">
-            <param name="dir.folder" value="testdata"/>
-            <param name="dir.output" value="tests/output"/>
-            <param name="dry.run" value="true"/>
-        </antcall>
-        <condition property="good.url.status">
-            <http url="http://jacobus.library.ualberta.ca/~watson/box1/good.tiff"/>
-        </condition>
-        <condition property="no.url.status">
-            <not>
-                <http url="http://jacobus.library.ualberta.ca/~watson/box1/good-no-url.tiff"/>
-            </not>
-        </condition>
-        <au:assertPropertyEquals name="good.url.status" value="true"/>
-        <au:assertPropertyEquals name="no.url.status" value="true"/>
-        <au:assertFilesMatch actual="output/fileset-validatedtiffs.txt"
-            expected="tests/validate-matchingurl/fileset-validatedtiffs.txt"/>
-        <au:assertFilesMatch actual="output/report-not-validated-tiff.txt"
-            expected="tests/validate-matchingurl/report-not-validated-tiff.txt"/>
+      <antcall target="final-tiff-validation" inheritall="yes">
+         <param name="dir.folder" value="testdata"/>
+         <param name="dir.output" value="tests/output"/>
+         <param name="dry.run" value="true"/>
+      </antcall>
+      <condition property="good.url.status">
+         <http url="http://jacobus.library.ualberta.ca/~watson/box1/good.tiff"/>
+      </condition>
+      <condition property="no.url.status">
+         <not>
+            <http url="http://jacobus.library.ualberta.ca/~watson/box1/good-no-url.tiff"/>
+         </not>
+      </condition>
+      <au:assertPropertyEquals name="good.url.status" value="true"/>
+      <au:assertPropertyEquals name="no.url.status" value="true"/>
+      <au:assertFilesMatch actual="output/fileset-validatedtiffs.txt" expected="tests/validate-matchingurl/fileset-validatedtiffs.txt"/>
+      <au:assertFilesMatch actual="output/report-not-validated-tiff.txt" expected="tests/validate-matchingurl/report-not-validated-tiff.txt"/>
 
-    </target>
+   </target>
 </project>
