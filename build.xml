@@ -126,6 +126,18 @@
         <echo>End run: ${end.tstamp}</echo>
         <record action="stop" name="${log.run}"/>
         <echo>Run log: ${log.run}</echo>
+       
+       <!-- generate list of files on USB drive -->
+       <exec executable="/bin/bash" output="${dir.run}/diskfilelist.txt">
+          <arg value="${basedir}/diskfilelist.sh"/>
+          <arg value="${dir.source}"/>
+       </exec>
+       
+       <!-- upload log file and file list -->
+       <scp file="${log.run}" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
+       <scp file="${dir.run}/diskfilelist.txt" todir="${host.user}:${host.password}@${host.name}:${host.dir}"/>
+       
+       
     </target>
 
     <target name="check-folder" description="Check status of folder on server" depends="init">
