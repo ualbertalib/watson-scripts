@@ -13,6 +13,9 @@
         a single directory -->
     <property name="dirset" value="*"/>
 
+	<!-- set cleanup=false to leave bag artefacts in place -->
+	<property name="cleanup" value="true"/>
+	
     <!-- whether to be verbose in https posts. Override with -Dpost.verbose=true -->
     <property name="post.verbose" value="false"/>
     
@@ -234,6 +237,7 @@ dir.bag: ${dir.bag}
          Note: only files that match the "before" regex will be renamed, so it is safe to repeat this 
          job on previously renamed files.
          -->
+         <echo>Renaming in ${dir.folder}</echo>
         <!-- param dir.folder inherited -->
         <antcall target="post">
             <param name="filename" value=""/>
@@ -243,12 +247,12 @@ dir.bag: ${dir.bag}
 
         <!-- TODO handle subdirs -->
         <!-- get box number from folder name -->
-        <propertyregex property="box" input="${dir.folder}" regexp=".*\-([0-9]*)\-[0-9]*$"
+        <propertyregex property="box" input="${dir.folder}" regexp=".*\-([0-9]*)\-[0-9]*[a-zA-Z]?$"
             select="\1"/>
         <echo>Box: ${box}</echo>
         <!-- rename any file that matches old pattern (without box number) -->
         <fileset id="files-to-rename" dir="${dir.folder}" includes="**/*">
-            <filename regex="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"
+            <filename regex="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*[a-zA-Z]?)\-([0-9]*)\.(.*)$"
             />
         </fileset>
         <pathconvert pathsep="${line.separator}" property="files" refid="files-to-rename"/>
@@ -257,7 +261,7 @@ dir.bag: ${dir.bag}
         <move todir="${dir.folder}">
             <fileset refid="files-to-rename"/>
             <regexpmapper
-                from="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*)\-([0-9]*)\.(.*)$"
+                from="^(.*\${file.separator})?([0-9]*)\-([0-9]*)\-([0-9]*[a-zA-Z]?)\-([0-9]*)\.(.*)$"
                 to="\1\2\-\3\-${box}\-\4\-\5\.\6"/>
         </move>
 
@@ -507,7 +511,12 @@ dir.bag: ${dir.bag}
             <srcfiles dir="${dir.bag}" includes="**/*"/>
         </uptodate>
         <antcall target="make-tarball" inheritall="true"/>
+        <if>
+        	<equals arg1="${cleanup}" arg2="true"/>
+        	<then>
         <delete dir="${dir.bag}"/>
+        </then>
+        </if>
         
         <!-- create directory on CWRC server -->
         <sshexec host="${host.name}" username="${host.user}" trust="true"
@@ -518,16 +527,29 @@ dir.bag: ${dir.bag}
         <exec dir="${dir.working}" executable="${split}">
             <arg line=" -b2000m ${bagname} split_${bagname}"/> 
         </exec>
-        <delete file="${dir.working}/${bagname}"/>
         
+        <if>
+        	<equals arg1="${cleanup}" arg2="true"/>
+        	<then>
+        <delete file="${dir.working}/${bagname}"/>
+			</then>
+		</if>
+			
         <!-- upload chunks with rsync -->
         <echo>Create upload script ${dir.working}/upload.sh</echo>
         <echo file="${dir.working}/upload.sh">#!/bin/bash
 ${rsync} -e ssh -av --password-file=~/.ssh/id_rsa \
 split_* \
 ${host.user}@${host.name}:${host.dir}
-rm split_*
         </echo>
+                <if>
+        	<equals arg1="${cleanup}" arg2="true"/>
+        	<then>
+<echo file="${dir.working}/upload.sh" append="true">
+rm split_*
+</echo>
+</then>
+</if>
         <!-- set permissions -->
         <chmod file="${dir.working}/upload.sh" perm="u+rx"/>
         <!-- execute -->
