@@ -314,6 +314,10 @@ dir.bag: ${dir.bag}
             <param name="path" value="${foldername}"/>
             <param name="action" value="UAL-jhove-start"/>
         </antcall>
+        <!-- create and then remove a dir, in case we need to create an intermediate dir hidden in the filename param (e.g. "001-087/91-117-19-344-001") -->
+        <mkdir dir="${dir.metadata}${file.separator}${filename}-tempdir"/>
+        <delete dir="${dir.metadata}${file.separator}${filename}-tempdir"/>
+        
         <java jar="lib/jhoveapp.jar" fork="true">
             <arg value="-c"/>
             <arg value="lib/jhove.conf"/>
@@ -519,8 +523,9 @@ dir.bag: ${dir.bag}
         </if>
         
         <!-- create directory on CWRC server -->
-        <sshexec host="${host.name}" username="${host.user}" trust="true"
-            password="${host.password}" command="mkdir -p ${host.dir}"/>
+        <!-- actually don't create it, let rsync do it (MATT) 2014-04-13, 12:39pm -->
+        <!-- <sshexec host="${host.name}" username="${host.user}" trust="true"
+            password="${host.password}" command="mkdir -p ${host.dir}"/> -->
 
         <!-- split tarball into chunks -->
         <echo>Split bag tarball</echo>
@@ -536,11 +541,12 @@ dir.bag: ${dir.bag}
 		</if>
 			
         <!-- upload chunks with rsync -->
+        <!-- added trailing slash after host.dir} so that rsync will create the dir, (MATT) 2014-04-13, 12:39pm -->
         <echo>Create upload script ${dir.working}/upload.sh</echo>
         <echo file="${dir.working}/upload.sh">#!/bin/bash
-${rsync} -e ssh -av --password-file=~/.ssh/id_rsa \
+${rsync} -e ssh -pt --block-size=200 --timeout=60 --partial --password-file=~/.ssh/id_rsa \
 split_* \
-${host.user}@${host.name}:${host.dir}
+${host.user}@${host.name}:${host.dir}/
         </echo>
                 <if>
         	<equals arg1="${cleanup}" arg2="true"/>
