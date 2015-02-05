@@ -509,7 +509,7 @@ dir.bag: ${dir.bag}
         <!-- remove .DS_Store and Thumbs.db files, in case you've inspected the bag in Finder or Windows Explorer; 
          defaultexcludes="no" is necessary because .DS_Store is by default 
          excluded from all directory-based tasks -->
-        <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no"/>
+        <delete dir="${dir.bag}" includes="**/.DS_Store,**/Thumbs.db" defaultexcludes="no" verbose="true"/>
         <!-- check whether tarball exists and is up to date: if so, use it -->
         <uptodate property="tarball.uptodate" targetfile="${dir.working}/${bagname}">
             <srcfiles dir="${dir.bag}" includes="**/*"/>
@@ -518,6 +518,7 @@ dir.bag: ${dir.bag}
         <if>
         	<equals arg1="${cleanup}" arg2="true"/>
         	<then>
+        	    <echo>Cleanup: delete ${dir.bag}</echo>
         <delete dir="${dir.bag}"/>
         </then>
         </if>
@@ -528,23 +529,27 @@ dir.bag: ${dir.bag}
             password="${host.password}" command="mkdir -p ${host.dir}"/> -->
 
         <!-- split tarball into chunks -->
-        <echo>Split bag tarball</echo>
+        <!-- added --verbose to get verbose output - pbinkley 2015-02-05 -->
+        <echo>Split bag tarball for ${bagname}</echo>
         <exec dir="${dir.working}" executable="${split}">
-            <arg line=" -b2000m ${bagname} split_${bagname}"/> 
+            <arg line=" --verbose -b2000m ${bagname} split_${bagname}"/> 
         </exec>
         
         <if>
         	<equals arg1="${cleanup}" arg2="true"/>
         	<then>
+        	    <echo>Cleanup: delete ${dir.working}/${bagname}</echo>
         <delete file="${dir.working}/${bagname}"/>
 			</then>
 		</if>
 			
         <!-- upload chunks with rsync -->
         <!-- added trailing slash after host.dir} so that rsync will create the dir, (MATT) 2014-04-13, 12:39pm -->
+        <!-- added -vv to get verbose output - pbinkley 2015-02-05 -->
         <echo>Create upload script ${dir.working}/upload.sh</echo>
         <echo file="${dir.working}/upload.sh">#!/bin/bash
 ${rsync} -e ssh -pt --block-size=200 --timeout=60 --partial --password-file=~/.ssh/id_rsa \
+-vv \
 split_* \
 ${host.user}@${host.name}:${host.dir}/
         </echo>
@@ -556,6 +561,11 @@ rm split_*
 </echo>
 </then>
 </if>
+        <!-- log upload script -->
+        <loadfile property="uploadscript" srcFile="${dir.working}/upload.sh"/>
+        <echo>Upload script:
+${uploadscript}
+</echo>
         <!-- set permissions -->
         <chmod file="${dir.working}/upload.sh" perm="u+rx"/>
         <!-- execute -->
@@ -589,6 +599,10 @@ rm split_*
 
     <target name="make-tarball" unless="tarball.uptodate">
         <tar basedir="${dir.bag}" destfile="${dir.working}/${bagname}" compression="gzip" includes="**/*"/>
+        <echo>Contents of ${dir.working}/${bagname}</echo>
+        <exec dir="${dir.working}" executable="${tar}">
+            <arg line="${bagname}"/>
+        </exec>
     </target>
 
     <target name="final-tiff-validation" depends="metadata">
